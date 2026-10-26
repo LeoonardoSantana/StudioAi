@@ -568,7 +568,11 @@ class ImageEngine:
         return pose_img, pose_ok
 
     def _analyze_anatomy_and_mask(
-        self, pil_img, mask_target="all_clothes", preserve_limbs=True
+        self,
+        pil_img,
+        mask_target="all_clothes",
+        preserve_limbs=True,
+        expand_body=False,
     ):
         import numpy as np
         import torch
@@ -682,6 +686,55 @@ class ImageEngine:
                         if kpts[idx][0] <= 1 or kpts[idx][1] <= 1:
                             return False
                         return conf is None or float(conf[idx]) >= 0.25
+
+                    if expand_body and kp_ok(5) and kp_ok(6):
+                        lower_ys = [
+                            float(kpts[i][1])
+                            for i in range(11, 17)
+                            if kp_ok(i)
+                        ]
+                        needs_expand = (
+                            len(lower_ys) < 4
+                            or float(np.median(lower_ys)) > h * 0.88
+                        )
+                        if needs_expand:
+                            ls, rs = kpts[5], kpts[6]
+                            sh_dist = max(
+                                40.0, abs(float(ls[0]) - float(rs[0]))
+                            )
+                            p_sh_top = min(float(ls[1]), float(rs[1]))
+                            cx = (float(ls[0]) + float(rs[0])) * 0.5
+                            hip_y = min(
+                                h - 24,
+                                max(
+                                    int(h * 0.66),
+                                    int(p_sh_top + sh_dist * 1.10),
+                                ),
+                            )
+                            hip_dx = max(36, int(sh_dist * 0.24))
+                            knee_y = min(
+                                h - 8,
+                                hip_y + max(100, int(sh_dist * 0.45)),
+                            )
+                            knee_dx = max(48, int(sh_dist * 0.38))
+                            inferred = {
+                                11: (cx - hip_dx, hip_y),
+                                12: (cx + hip_dx, hip_y),
+                                13: (cx - knee_dx, knee_y),
+                                14: (cx + knee_dx, knee_y),
+                                15: (
+                                    cx - knee_dx * 0.78,
+                                    min(h - 4, knee_y + sh_dist * 0.18),
+                                ),
+                                16: (
+                                    cx + knee_dx * 0.78,
+                                    min(h - 4, knee_y + sh_dist * 0.18),
+                                ),
+                            }
+                            for idx, (x, y) in inferred.items():
+                                kpts[idx] = (x, y)
+                                if conf is not None and idx < len(conf):
+                                    conf[idx] = 0.80
 
                     body_pts = [
                         kpts[i] for i in range(5, 17) if kp_ok(i)
@@ -887,6 +940,22 @@ class ImageEngine:
             person_area = np.full((h, w), 255, dtype=np.uint8)
 
         active_np[person_area <= 128] = 0
+        if mask_target == "all_clothes" and expand_body:
+            limb_pose_np = np.array(limb_pose_area, dtype=np.uint8)
+            expand_np = np.maximum(limb_pose_np, body_hull_np)
+            if person_box_from_pose:
+                expand_np[person_box_np <= 128] = 0
+            try:
+                import cv2
+
+                expand_np = cv2.dilate(
+                    expand_np,
+                    np.ones((9, 9), dtype=np.uint8),
+                    iterations=1,
+                )
+            except Exception:
+                pass
+            active_np = np.maximum(active_np, expand_np)
         if mask_target == "all_clothes" and not preserve_limbs:
             try:
                 import cv2
@@ -1139,6 +1208,35 @@ class ImageEngine:
 
         sdxl_w, sdxl_h = get_sdxl_native_dimensions(orig_w, orig_h)
         work_img = orig_img.resize((sdxl_w, sdxl_h), Image.LANCZOS)
+        expand_body = bool(
+            payload.get("expand_body") or payload.get("expandBody")
+        )
+        full_body = (
+            mask_target == "full_body"
+            or bool(payload.get("full_body") or payload.get("fullBody"))
+        )
+        frame_bounds = None
+        if expand_body and mask_target == "all_clothes" and not full_body:
+            from PIL import ImageFilter
+
+            frame_scale = max(
+                0.60,
+                min(0.95, float(payload.get("frame_scale") or 0.82)),
+            )
+            scaled_w = max(1, int(sdxl_w * frame_scale))
+            scaled_h = max(1, int(sdxl_h * frame_scale))
+            offset_x = (sdxl_w - scaled_w) // 2
+            offset_y = max(0, int(sdxl_h * 0.02))
+            frame = work_img.resize((scaled_w, scaled_h), Image.LANCZOS)
+            canvas = work_img.filter(ImageFilter.GaussianBlur(36))
+            canvas.paste(frame, (offset_x, offset_y))
+            work_img = canvas
+            frame_bounds = (
+                offset_x,
+                offset_y,
+                offset_x + scaled_w,
+                offset_y + scaled_h,
+            )
 
         if mask_target == "enhance":
             try:
@@ -1255,6 +1353,7 @@ class ImageEngine:
             generated.save(buf, format="PNG")
             return base64.b64encode(buf.getvalue()).decode("utf-8")
 
+        analysis_target = "all_clothes" if full_body else mask_target
         (
             active_mask,
             pose_img,
@@ -1262,8 +1361,9 @@ class ImageEngine:
             blend_mask,
         ) = self._analyze_anatomy_and_mask(
             work_img,
-            mask_target=mask_target,
+            mask_target=analysis_target,
             preserve_limbs=payload.get("preserve_limbs") is not False,
+            expand_body=expand_body or full_body,
         )
         mask_ratio = float(anatomy_info.get("mask_ratio", 0.0))
         if mask_ratio < 0.008:
@@ -1276,7 +1376,18 @@ class ImageEngine:
                 ["detail_xl"], adapter_weights=[lora_scale]
             )
 
-        control_scale = 0.95 if anatomy_info.get("pose_ok") else 0.0
+        control_scale = max(
+            0.0,
+            min(
+                1.5,
+                float(
+                    payload.get(
+                        "control_scale",
+                        0.95 if anatomy_info.get("pose_ok") else 0.0,
+                    )
+                ),
+            ),
+        )
         generator = None
         seed = payload.get("seed")
         if seed is not None:
@@ -1362,13 +1473,152 @@ class ImageEngine:
                 print(f"seamless blend warn: {e}")
 
         if blend_mode == "raw":
-            final_work = generated
+            first_stage = generated
         else:
-            final_work = (
+            first_stage = (
                 generated
                 if seamless_ok
                 else Image.composite(generated, work_img, blend_mask)
             )
+
+        debug_outpaint_mask = None
+        debug_outpaint_pose = None
+        debug_first_stage = None
+        if full_body:
+            from PIL import ImageDraw, ImageFilter
+            debug_first_stage = first_stage
+
+            frame_scale = max(
+                0.55,
+                min(0.90, float(payload.get("frame_scale") or 0.80)),
+            )
+            scaled_w = max(1, int(sdxl_w * frame_scale))
+            scaled_h = max(1, int(sdxl_h * frame_scale))
+            offset_x = (sdxl_w - scaled_w) // 2
+            offset_y = max(0, int(sdxl_h * 0.01))
+            frame = first_stage.resize(
+                (scaled_w, scaled_h), Image.LANCZOS
+            )
+            outpaint_img = first_stage.resize(
+                (sdxl_w, sdxl_h), Image.LANCZOS
+            ).filter(ImageFilter.GaussianBlur(28))
+            outpaint_img.paste(frame, (offset_x, offset_y))
+
+            try:
+                (
+                    _,
+                    outpaint_pose_img,
+                    outpaint_anatomy,
+                    _,
+                ) = self._analyze_anatomy_and_mask(
+                    outpaint_img,
+                    mask_target="all_clothes",
+                    preserve_limbs=False,
+                    expand_body=True,
+                )
+            except Exception as e:
+                print(f"full body pose warn: {e}")
+                outpaint_pose_img = Image.new(
+                    "RGB", (sdxl_w, sdxl_h), (0, 0, 0)
+                )
+                outpaint_anatomy = {}
+
+            outpaint_mask_img = Image.new("L", (sdxl_w, sdxl_h), 255)
+            mask_draw = ImageDraw.Draw(outpaint_mask_img)
+            inner_margin = max(4, int(min(sdxl_w, sdxl_h) * 0.008))
+            mask_draw.rectangle(
+                [
+                    offset_x + inner_margin,
+                    offset_y + inner_margin,
+                    offset_x + scaled_w - inner_margin,
+                    offset_y + scaled_h - inner_margin,
+                ],
+                fill=0,
+            )
+            outpaint_mask_img = outpaint_mask_img.filter(
+                ImageFilter.GaussianBlur(4)
+            )
+            debug_outpaint_mask = outpaint_mask_img
+            debug_outpaint_pose = outpaint_pose_img
+
+            outpaint_generator = None
+            if seed is not None:
+                outpaint_generator = self._torch.Generator(
+                    device="cuda"
+                ).manual_seed(int(seed) + 1000)
+            outpaint_steps = max(
+                20,
+                min(
+                    38,
+                    int(payload.get("outpaint_steps") or max(22, steps - 6)),
+                ),
+            )
+            outpaint_control = max(
+                0.0,
+                min(
+                    1.5,
+                    float(
+                        payload.get(
+                            "outpaint_control_scale",
+                            1.05
+                            if outpaint_anatomy.get("pose_ok")
+                            else 0.0,
+                        )
+                    ),
+                ),
+            )
+            outpaint_prompt = (
+                "photorealistic fully nude woman, same face identity, "
+                "same seated upper-body pose, complete full body composition, "
+                "bare abdomen and navel, bare hips, thighs, knees and legs, "
+                "legs continuing naturally downward, same car interior and "
+                "background, seamless continuation, realistic skin texture, "
+                "soft natural lighting, uncensored"
+            )
+            blocked_negative_terms = (
+                "different pose",
+                "changed pose",
+                "altered body position",
+                "moved arms",
+                "moved legs",
+                "changed camera angle",
+                "zoomed crop",
+                "changed framing",
+            )
+            outpaint_negative = ", ".join(
+                part.strip()
+                for part in negative_prompt.split(",")
+                if part.strip()
+                and not any(
+                    term in part.lower()
+                    for term in blocked_negative_terms
+                )
+            )
+            print(
+                "Full body outpaint:",
+                f"scale={frame_scale:.2f} frame={scaled_w}x{scaled_h}",
+                f"steps={outpaint_steps} control={outpaint_control}",
+            )
+            outpainted = self.inpaint(
+                prompt=outpaint_prompt,
+                negative_prompt=outpaint_negative,
+                image=outpaint_img,
+                mask_image=outpaint_mask_img,
+                control_image=outpaint_pose_img,
+                controlnet_conditioning_scale=outpaint_control,
+                control_guidance_start=0.0,
+                control_guidance_end=0.90,
+                strength=1.0,
+                generator=outpaint_generator,
+                num_inference_steps=outpaint_steps,
+                guidance_scale=cfg_scale,
+                width=sdxl_w,
+                height=sdxl_h,
+            ).images[0]
+            final_work = outpainted
+        else:
+            final_work = first_stage
+
         final_out = final_work.resize((orig_w, orig_h), Image.LANCZOS)
 
         if payload.get("debug"):
@@ -1385,6 +1635,21 @@ class ImageEngine:
                     "mask": pil_to_b64(active_mask),
                     "blend_mask": pil_to_b64(blend_mask),
                     "pose": pil_to_b64(pose_img),
+                    "first_stage": (
+                        pil_to_b64(debug_first_stage)
+                        if debug_first_stage is not None
+                        else None
+                    ),
+                    "outpaint_mask": (
+                        pil_to_b64(debug_outpaint_mask)
+                        if debug_outpaint_mask is not None
+                        else None
+                    ),
+                    "outpaint_pose": (
+                        pil_to_b64(debug_outpaint_pose)
+                        if debug_outpaint_pose is not None
+                        else None
+                    ),
                     "anatomy": anatomy_info,
                 }
             )

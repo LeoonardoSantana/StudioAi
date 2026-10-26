@@ -181,7 +181,13 @@
             preserveLimbs,
             blendMode,
             detailRestore,
-            colorRestore
+            colorRestore,
+            expandBody,
+            fullBody,
+            frameScale,
+            controlScale,
+            outpaintSteps,
+            outpaintControlScale
         } = params;
 
         const apiUrl = normalizeUrl(rawUrl);
@@ -226,6 +232,24 @@
         }
         if (Number.isFinite(colorRestore)) {
             payload.color_restore = colorRestore;
+        }
+        if (typeof expandBody === 'boolean') {
+            payload.expand_body = expandBody;
+        }
+        if (typeof fullBody === 'boolean') {
+            payload.full_body = fullBody;
+        }
+        if (Number.isFinite(frameScale)) {
+            payload.frame_scale = frameScale;
+        }
+        if (Number.isFinite(controlScale)) {
+            payload.control_scale = controlScale;
+        }
+        if (Number.isFinite(outpaintSteps)) {
+            payload.outpaint_steps = outpaintSteps;
+        }
+        if (Number.isFinite(outpaintControlScale)) {
+            payload.outpaint_control_scale = outpaintControlScale;
         }
 
         if (base64Image) {

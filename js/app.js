@@ -952,6 +952,9 @@
         const isEnhanceMode = Boolean(
             state.currentPreset && state.currentPreset.maskTarget === 'enhance'
         );
+        const isFullBodyMode = Boolean(
+            state.currentPreset && state.currentPreset.maskTarget === 'full_body'
+        );
 
         if (isVideoMode && !state.base64UploadedImage) {
             showMessage(
@@ -994,7 +997,11 @@
                 ? baseVideoEstimate
                 : baseVideoEstimate + 35
             : isGpuWarm
-            ? 22
+            ? isFullBodyMode
+                ? 55
+                : 22
+            : isFullBodyMode
+            ? 95
             : 58;
 
         const startMs = Date.now();
@@ -1043,6 +1050,17 @@
                     phaseText = 'Fase 2/3: Eliminando grano y reconstruyendo detalle...';
                 } else {
                     phaseText = 'Fase 3/3: Ajustando nitidez, color e iluminación...';
+                }
+            } else if (isFullBodyMode) {
+                subText = 'Etapa 1 tipo expand4 + etapa 2 de cuerpo completo';
+                if (!isGpuWarm && elapsedSec < 16) {
+                    phaseText = 'Fase 1/4: Despertando GPU A100-80GB y cargando modelo...';
+                } else if (pct < 34) {
+                    phaseText = 'Fase 2/4: Generando la base con pose protegida...';
+                } else if (pct < 82) {
+                    phaseText = 'Fase 3/4: Completando cadera, muslos y piernas...';
+                } else {
+                    phaseText = 'Fase 4/4: Uniendo iluminación y fondo...';
                 }
             } else {
                 subText = 'Detección automática de ropa + Rostro 100% protegido';
@@ -1104,6 +1122,24 @@
                     : null,
                 colorRestore: state.currentPreset
                     ? state.currentPreset.colorRestore
+                    : null,
+                expandBody: state.currentPreset
+                    ? state.currentPreset.expandBody
+                    : null,
+                fullBody: state.currentPreset
+                    ? state.currentPreset.fullBody
+                    : null,
+                frameScale: state.currentPreset
+                    ? state.currentPreset.frameScale
+                    : null,
+                controlScale: state.currentPreset
+                    ? state.currentPreset.controlScale
+                    : null,
+                outpaintSteps: state.currentPreset
+                    ? state.currentPreset.outpaintSteps
+                    : null,
+                outpaintControlScale: state.currentPreset
+                    ? state.currentPreset.outpaintControlScale
                     : null
             });
 
