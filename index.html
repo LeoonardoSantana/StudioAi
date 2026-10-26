@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Media Studio - Lustify SDXL + Wan 2.1 I2V</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                }
+            }
+        };
+    </script>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col">
+
+    <!-- Barra Superior Limpia -->
+    <header class="border-b border-slate-800/80 bg-slate-900/90 backdrop-blur sticky top-0 z-30">
+        <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center font-bold text-white shadow-md shadow-indigo-500/20">
+                    ✨
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-base font-bold tracking-tight text-white">Estudio IA</h1>
+                        <span class="hidden md:inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30">
+                            v1.0
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Estado del Servidor GPU Serverless (Modal.com / Kaggle) -->
+            <div class="flex items-center gap-2">
+                <div class="hidden sm:flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5">
+                    <span id="serverDot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                    <input type="url" id="apiUrl" value="https://leonardo-sh170--estudio-ia-serverless-api.us-east.modal.run"
+                           oninput="saveApiUrlSetting(this.value)"
+                           class="bg-transparent text-xs text-slate-300 focus:outline-none w-56 font-mono"
+                           placeholder="https://tu-app.modal.run">
+                    <button type="button" onclick="checkServerStatus()" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-emerald-300 px-2 py-0.5 rounded font-semibold transition" title="Verificar conexión con Modal Serverless">
+                        Probar
+                    </button>
+                </div>
+                <button type="button" onclick="toggleKaggleModal()" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 rounded-xl font-semibold transition flex items-center gap-1.5 shadow-sm">
+                    <span>⚡ Configurar Modal ($30 Gratis)</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Contenedor Principal en 2 Columnas Simples -->
+    <main class="flex-1 max-w-6xl w-full mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+        <!-- COLUMNA IZQUIERDA: Pasos 1, 2 y 3 (5 columnas) -->
+        <section class="lg:col-span-5 flex flex-col gap-5" aria-label="Controles de configuración">
+
+            <!-- Selector Principal: Arquitectura Híbrida -->
+            <div class="bg-slate-900 p-1.5 rounded-2xl border border-slate-800 grid grid-cols-2 gap-1.5">
+                <button type="button" onclick="setMainCategory('image')" id="tab-cat-image" class="py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold bg-indigo-600 text-white shadow transition flex items-center justify-center gap-2">
+                    <span>📸 Foto</span>
+                </button>
+                <button type="button" onclick="setMainCategory('video')" id="tab-cat-video" class="py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold text-slate-400 hover:text-white transition flex items-center justify-center gap-2">
+                    <span>🎬 Video</span>
+                </button>
+            </div>
+
+            <!-- PASO 1: Subir Imagen -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 text-xs font-bold flex items-center justify-center border border-indigo-500/30">1</span>
+                        <h2 class="text-sm font-bold text-white" id="uploadTitle">Subir imagen</h2>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span id="origDimensions" class="text-[11px] font-mono text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/60 hidden"></span>
+                        <button type="button" id="btnRemoveUpload" onclick="clearUploadedImage(event)" class="hidden text-[10px] bg-rose-950/70 hover:bg-rose-800 text-rose-300 border border-rose-800/60 px-2 py-0.5 rounded font-semibold transition" title="Quitar imagen subida">
+                            ✕ Quitar
+                        </button>
+                    </div>
+                </div>
+
+                <label id="dropZone" for="imageInput" class="border-2 border-dashed border-slate-700 hover:border-indigo-500 rounded-xl p-4 text-center cursor-pointer transition bg-slate-950/60 flex flex-col items-center justify-center min-h-[125px] relative group">
+                    <input type="file" id="imageInput" accept="image/*" class="hidden" onchange="previewUpload(event)">
+                    <div id="uploadPlaceholder" class="flex flex-col items-center gap-1.5">
+                        <div class="w-10 h-10 rounded-full bg-slate-900 border border-slate-700 flex items-center justify-center text-lg group-hover:scale-110 transition">
+                            📁
+                        </div>
+                        <span class="text-xs font-medium text-slate-300">Haz clic o arrastra la foto que quieres editar</span>
+                    </div>
+                    <img id="uploadedPreview" class="hidden max-h-36 rounded-lg object-contain" alt="Vista previa" />
+                </label>
+            </div>
+
+            <!-- PASO 2: Personalizar Instrucción y Calidad -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-3.5">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 text-xs font-bold flex items-center justify-center border border-indigo-500/30">2</span>
+                        <h2 class="text-sm font-bold text-white">¿Qué cambio deseas hacer?</h2>
+                    </div>
+                    <span id="activePresetBadge" class="text-[11px] text-indigo-300 bg-indigo-950/80 border border-indigo-800/60 px-2.5 py-0.5 rounded-full font-medium">
+                        1. Hiperrealismo Piel &amp; Luz +18
+                    </span>
+                </div>
+
+                <textarea id="prompt" rows="3" placeholder="Elige un preset de la derecha o escribe aquí qué ropa, anatomía, pose o movimiento quieres..."
+                          class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition resize-none"></textarea>
+
+                <!-- Botones simples de Calidad Costo-Beneficio -->
+                <div id="imageQualityBox">
+                    <label class="text-[11px] font-semibold text-slate-400 block mb-1.5">Calidad de Salida:</label>
+                    <div class="grid grid-cols-3 gap-1.5">
+                        <button type="button" onclick="setQuality('draft')" id="q-draft" class="p-2 rounded-xl border border-slate-800 bg-slate-950 text-left transition hover:border-slate-700">
+                            <div class="text-xs font-bold text-slate-200">🚀 Rápida</div>
+                            <div class="text-[10px] text-slate-500">Prueba en 3 seg</div>
+                        </button>
+                        <button type="button" onclick="setQuality('balanced')" id="q-balanced" class="p-2 rounded-xl border border-emerald-500/60 bg-emerald-950/20 text-left transition">
+                            <div class="text-xs font-bold text-emerald-300">⚡ Ideal (HD)</div>
+                            <div class="text-[10px] text-emerald-400/80">Mejor costo/calidad</div>
+                        </button>
+                        <button type="button" onclick="setQuality('original')" id="q-original" class="p-2 rounded-xl border border-slate-800 bg-slate-950 text-left transition hover:border-slate-700">
+                            <div class="text-xs font-bold text-slate-200">💎 Nativa</div>
+                            <div class="text-[10px] text-slate-500">Máximo detalle</div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Selector de Duración de Video (Solo visible cuando está en modo Video Wan 2.1) -->
+                <div id="videoDurationBox" class="hidden bg-purple-950/20 border border-purple-800/40 rounded-xl p-3">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="text-[11px] font-semibold text-purple-300 flex items-center gap-1.5">
+                            <span>⏱️ Duración:</span>
+                        </label>
+                        <span id="durationCostHint" class="text-[10px] text-purple-400 font-mono">81 frames (~45 seg)</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-1.5">
+                        <button type="button" onclick="setVideoDuration(5)" id="dur-5" class="py-2 px-2.5 rounded-xl border border-purple-500/70 bg-purple-950/40 text-center transition">
+                            <div class="text-xs font-bold text-purple-200">5 Segundos</div>
+                            <div class="text-[10px] text-purple-400">Óptimo / Económico</div>
+                        </button>
+                        <button type="button" onclick="setVideoDuration(10)" id="dur-10" class="py-2 px-2.5 rounded-xl border border-slate-800 bg-slate-950 text-center transition hover:border-slate-700">
+                            <div class="text-xs font-bold text-slate-200">10 Segundos</div>
+                            <div class="text-[10px] text-slate-500">Escena Completa</div>
+                        </button>
+                        <button type="button" onclick="setVideoDuration(20)" id="dur-20" class="py-2 px-2.5 rounded-xl border border-slate-800 bg-slate-950 text-center transition hover:border-slate-700">
+                            <div class="text-xs font-bold text-slate-200">20 Segundos</div>
+                            <div class="text-[10px] text-slate-500">Extendida (Bucle)</div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Opciones Avanzadas con LoRA pre-activado -->
+                <details class="bg-slate-950/70 border border-slate-800/80 rounded-xl px-3 py-2.5 text-xs">
+                    <summary class="cursor-pointer text-slate-300 hover:text-white font-semibold select-none flex items-center justify-between">
+                        <span>⚙️ Opciones avanzadas (Ya pre-ajustadas al óptimo)</span>
+                        <span class="text-[10px] text-emerald-400 font-semibold">Auto-Calibrado ✅</span>
+                    </summary>
+                    <div class="pt-3 mt-2.5 border-t border-slate-800/80 space-y-4">
+                        <!-- Fuerza del LoRA -->
+                        <div class="bg-slate-900/70 p-2.5 rounded-lg border border-pink-800/40">
+                            <div class="flex justify-between text-[11px] font-semibold mb-0.5">
+                                <span class="text-pink-200">0. Intensidad del LoRA Realismo/+18</span>
+                                <span id="loraVal" class="font-mono text-pink-300 bg-pink-950/80 px-1.5 rounded">0.00</span>
+                            </div>
+                            <p class="text-[10px] text-slate-400 mb-2 leading-relaxed">
+                                Los presets de foto usan 0.00 para evitar piel artificial; los de video usan 0.85.
+                            </p>
+                            <input type="range" id="loraScale" min="0" max="1.2" step="0.05" value="0.0" oninput="document.getElementById('loraVal').innerText = this.value"
+                                   class="w-full accent-pink-500 bg-slate-800 h-1.5 rounded-lg cursor-pointer">
+                        </div>
+
+                        <!-- Denoise Strength -->
+                        <div id="denoiseOption" class="bg-slate-900/70 p-2.5 rounded-lg border border-slate-800/60">
+                            <div class="flex justify-between text-[11px] font-semibold mb-0.5">
+                                <span class="text-slate-200">1. Fuerza del cambio (automática)</span>
+                                <span id="denoiseVal" class="font-mono text-indigo-400 bg-indigo-950/80 px-1.5 rounded">1.0</span>
+                            </div>
+                            <p class="text-[10px] text-slate-400 mb-2 leading-relaxed">
+                                La IA detecta y reemplaza la ropa automáticamente conservando rostro y pose. Los presets ya usan la fuerza completa necesaria para inpainting real.
+                            </p>
+                            <input type="range" id="denoise" min="0.2" max="1.0" step="0.01" value="1.0" oninput="document.getElementById('denoiseVal').innerText = this.value"
+                                   class="w-full accent-indigo-500 bg-slate-800 h-1.5 rounded-lg cursor-pointer">
+                        </div>
+
+                        <!-- Steps -->
+                        <div class="bg-slate-900/70 p-2.5 rounded-lg border border-slate-800/60">
+                            <div class="flex justify-between text-[11px] font-semibold mb-0.5">
+                                <span class="text-slate-200">2. Pasos de Detalle (Steps)</span>
+                                <span id="stepsVal" class="font-mono text-indigo-400 bg-indigo-950/80 px-1.5 rounded">30</span>
+                            </div>
+                            <p class="text-[10px] text-slate-400 mb-2 leading-relaxed">
+                                Los presets ya traen pasos calibrados: <strong class="text-slate-300">30 para foto SDXL</strong> y <strong class="text-slate-300">6 para Wan Lightning</strong>.
+                            </p>
+                            <input type="range" id="steps" min="4" max="40" value="30" oninput="document.getElementById('stepsVal').innerText = this.value"
+                                   class="w-full accent-indigo-500 bg-slate-800 h-1.5 rounded-lg cursor-pointer">
+                        </div>
+
+                        <!-- CFG Scale -->
+                        <div class="bg-slate-900/70 p-2.5 rounded-lg border border-slate-800/60">
+                            <div class="flex justify-between text-[11px] font-semibold mb-0.5">
+                                <span class="text-slate-200">3. Obediencia al Texto (CFG Scale)</span>
+                                <span id="cfgVal" class="font-mono text-indigo-400 bg-indigo-950/80 px-1.5 rounded">5.0</span>
+                            </div>
+                            <p class="text-[10px] text-slate-400 mb-2 leading-relaxed">
+                                Los presets ya traen CFG calibrado: <strong class="text-slate-300">5.0 para foto SDXL</strong> y <strong class="text-slate-300">1.0 para Wan Lightning</strong>.
+                            </p>
+                            <input type="range" id="cfg" min="1" max="10" step="0.5" value="5.0" oninput="document.getElementById('cfgVal').innerText = this.value"
+                                   class="w-full accent-indigo-500 bg-slate-800 h-1.5 rounded-lg cursor-pointer">
+                        </div>
+                    </div>
+                </details>
+
+                <!-- PASO 3: Botón Principal de Acción -->
+                <button type="button" onclick="generateMedia()" id="generateBtn" class="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 text-white text-sm font-bold rounded-xl shadow-lg shadow-indigo-600/25 transition flex items-center justify-center gap-2">
+                    <span>✨ 3. Generar</span>
+                </button>
+
+                <!-- Barra de Progreso en Tiempo Real (Debajo del botón) -->
+                <div id="inlineProgressBox" class="hidden bg-slate-950 border border-indigo-500/40 rounded-xl p-3 space-y-2">
+                    <div class="flex items-center justify-between text-xs">
+                        <span id="inlineProgressPhase" class="font-semibold text-indigo-300 truncate pr-2">Iniciando generación...</span>
+                        <span id="inlineProgressPct" class="font-mono font-bold text-white shrink-0">0%</span>
+                    </div>
+                    <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden p-0.5">
+                        <div id="inlineProgressBar" class="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full transition-all duration-300" style="width: 0%;"></div>
+                    </div>
+                    <div class="flex items-center justify-between text-[11px] text-slate-400">
+                        <span id="inlineProgressSub">Rostro protegido al 100%</span>
+                        <span id="inlineProgressEta" class="font-mono text-emerald-400">Calculando tiempo...</span>
+                    </div>
+                </div>
+
+                <!-- Mensajes de Estado Simples -->
+                <div id="statusBox" class="hidden rounded-xl p-3 text-xs border leading-relaxed" role="status" aria-live="polite"></div>
+            </div>
+        </section>
+
+        <!-- COLUMNA DERECHA: Visor Grande + Lista de 10 Presets + Historial (7 columnas) -->
+        <section class="lg:col-span-7 flex flex-col gap-5" aria-label="Visor, presets e historial">
+
+            <!-- VISOR INTERACTIVO (Referencias Fijas Antes/Después, Resultado o Video Wan 2.1) -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-3 shadow-xl">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex flex-wrap gap-1.5">
+                        <button type="button" onclick="useResultForVideo()" id="btnUseForVideo" class="hidden text-xs px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition shadow-sm">
+                            🎬 Pasar Resultado a Video
+                        </button>
+                        <button type="button" onclick="setViewerMode('result')" id="btnViewResult" class="hidden text-xs px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white font-medium transition">
+                            ✨ Resultado
+                        </button>
+                        <button type="button" onclick="setViewerMode('compare')" id="btnViewCompare" class="text-xs px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-medium transition">
+                            Antes / Después
+                        </button>
+                        <button type="button" onclick="setViewerMode('video')" id="btnViewVideo" class="hidden text-xs px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white font-medium transition">
+                            GIF / Video
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Lienzo Principal -->
+                <div class="relative w-full h-[320px] sm:h-[360px] bg-slate-950 rounded-xl overflow-hidden border border-slate-800 flex items-center justify-center select-none">
+
+                    <!-- MODO 1: Comparador Antes / Después con imágenes incluidas por preset -->
+                    <div id="compareContainer" class="relative w-full h-full flex items-center justify-center overflow-hidden">
+                        <!-- Imagen DESPUÉS (Referencia Fija 2) -->
+                        <div class="absolute inset-0 w-full h-full flex items-center justify-center bg-slate-950" id="afterVisual"></div>
+
+                        <!-- Botón opcional para cambiar manualmente la referencia DESPUÉS -->
+                        <div class="absolute top-3 right-3 z-40 flex items-center gap-1.5">
+                            <label for="refAfterInput" class="cursor-pointer bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg shadow transition flex items-center gap-1" title="Cambiar manualmente la imagen del DESPUÉS">
+                                <span>Cambiar Después</span>
+                            </label>
+                            <input type="file" id="refAfterInput" accept="image/*" class="hidden" onchange="uploadFixedReference('after', event)">
+                        </div>
+
+                        <!-- Imagen ANTES (Referencia Fija 1 con recorte clip-path 1:1) -->
+                        <div id="beforeClipper" class="before-clipper absolute inset-0 w-full h-full overflow-hidden bg-slate-900">
+                            <div class="w-full h-full flex items-center justify-center" id="beforeVisual"></div>
+                        </div>
+
+                        <!-- Botón opcional para cambiar manualmente la referencia ANTES -->
+                        <div class="absolute top-3 left-3 z-40 flex items-center gap-1.5">
+                            <label for="refBeforeInput" class="cursor-pointer bg-slate-900/95 hover:bg-slate-800 text-slate-200 border border-slate-700 text-[11px] font-bold px-2.5 py-1 rounded-lg shadow transition flex items-center gap-1" title="Cambiar manualmente la imagen del ANTES">
+                                <span>Cambiar Antes</span>
+                            </label>
+                            <input type="file" id="refBeforeInput" accept="image/*" class="hidden" onchange="uploadFixedReference('before', event)">
+                        </div>
+
+                        <!-- Barra Deslizadora -->
+                        <div id="sliderLine" class="absolute inset-y-0 w-0.5 bg-white shadow-[0_0_12px_rgba(255,255,255,0.9)] pointer-events-none z-20" style="left: 50%;">
+                            <div class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-9 h-9 rounded-full bg-indigo-600 border-2 border-white shadow-lg flex items-center justify-center text-white text-xs font-bold">
+                                ↔
+                            </div>
+                        </div>
+
+                        <input type="range" id="compareSlider" min="5" max="95" value="50" oninput="moveCompareSlider(this.value)"
+                               aria-label="Comparar antes y después"
+                               class="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize z-30">
+                    </div>
+
+                    <!-- MODO 2: Reproductor de Video Wan 2.1 / Demo en Vivo -->
+                    <div id="videoDemoContainer" class="hidden relative w-full h-full flex-col items-center justify-center bg-slate-950 overflow-hidden">
+                        <canvas id="videoDemoCanvas" class="w-full h-full object-cover"></canvas>
+                        <img id="videoPresetPreview" class="hidden absolute inset-0 w-full h-full object-contain bg-slate-950 z-0" alt="Vista previa GIF del preset" />
+                        <video id="resultVideo" class="hidden absolute inset-0 w-full h-full object-contain bg-slate-950 z-20" controls autoplay loop playsinline></video>
+                        <div class="absolute top-3 left-3 bg-purple-600/90 backdrop-blur text-white text-[11px] font-bold px-3 py-1 rounded-lg shadow flex items-center gap-2 z-10">
+                            <span class="w-2 h-2 rounded-full bg-white animate-ping"></span>
+                            <span id="videoDemoLabel">Demo en Vivo</span>
+                        </div>
+                        <div class="absolute bottom-3 inset-x-3 bg-slate-900/90 backdrop-blur border border-slate-700 rounded-xl p-2.5 flex items-center justify-between text-xs z-10">
+                            <div class="flex items-center gap-2.5">
+                                <button type="button" onclick="toggleVideoPause()" id="pauseBtn" class="w-7 h-7 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center font-bold">⏸</button>
+                                <span id="videoPresetInfo" class="text-slate-200 font-medium">Vista previa de animación</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MODO 4: Vista Dedicada del Resultado Generado por IA -->
+                    <div id="resultContainer" class="hidden relative w-full h-full flex-col items-center justify-center bg-slate-950 overflow-hidden p-2">
+                        <img id="resultImage" class="max-h-full max-w-full object-contain rounded-lg" alt="Resultado Final Generado" />
+                    </div>
+
+                    <!-- Pantalla de Carga con Barra de Progreso y Tiempo Restante -->
+                    <div id="loadingState" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-sm z-50 flex-col items-center justify-center gap-3.5 px-6 text-center">
+                        <div class="w-11 h-11 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                        <div class="w-full max-w-xs space-y-2">
+                            <div class="flex items-center justify-between text-xs">
+                                <span id="loadingStatusText" class="text-slate-200 font-semibold truncate pr-2">Conectando con GPU...</span>
+                                <span id="viewerProgressPct" class="font-mono font-bold text-indigo-300 shrink-0">0%</span>
+                            </div>
+                            <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+                                <div id="viewerProgressBar" class="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full transition-all duration-300" style="width: 0%;"></div>
+                            </div>
+                            <p id="viewerProgressEta" class="text-[11px] font-mono text-emerald-400">Tiempo estimado: calculando...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GALERÍA DE LOS 10 PRESETS MÁS USADOS (Lustify SDXL + Wan 2.1) -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-3">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        <h3 class="text-sm font-bold text-white">Elige un Preset</h3>
+                    </div>
+                    <div class="flex gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+                        <button type="button" onclick="setMainCategory('image')" id="filter-image" class="px-2.5 py-1 rounded-lg bg-indigo-600 text-white font-medium">Foto</button>
+                        <button type="button" onclick="setMainCategory('video')" id="filter-video" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white">Video</button>
+                    </div>
+                </div>
+
+                <!-- Tarjetas de Presets Limpias -->
+                <div id="presetsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[300px] overflow-y-auto pr-1">
+                    <!-- Renderizado dinámico por js/app.js -->
+                </div>
+            </div>
+
+            <!-- CARPETA DEL PROYECTO / HISTORIAL PERSISTENTE -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-3">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                        <span class="text-base">🗂️</span>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h3 class="text-sm font-bold text-white">Carpeta del Proyecto e Historial</h3>
+                                <span id="historyCountBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">0 guardados</span>
+                            </div>
+                            <p class="text-[11px] text-slate-400">Se guarda en automático aunque se recargue la página. Descarga o envía cualquier foto a Video.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-1.5">
+                        <button type="button" onclick="connectLocalProjectFolder()" id="btnFolderSync" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1.5 rounded-xl font-medium transition flex items-center gap-1" title="Guardar automáticamente una copia en una carpeta de tu PC">
+                            <span>📁 Vincular Carpeta PC</span>
+                        </button>
+                        <button type="button" onclick="clearAllHistory()" id="btnClearAll" class="hidden text-[11px] bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-800/60 px-2.5 py-1.5 rounded-xl font-medium transition">
+                            🗑️ Vaciar Todo
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Galería de Archivos Guardados -->
+                <div id="historyGallery" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-[340px] overflow-y-auto pr-1">
+                    <!-- Renderizado dinámico por js/app.js -->
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Modal Guía Serverless Modal.com ($30/mes Gratis) + Kaggle Modo Silencioso -->
+    <div id="kaggleModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-5 shadow-2xl flex flex-col gap-4 my-auto max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div class="flex items-center gap-2">
+                    <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold text-xs">SERVERLESS GPU</span>
+                    <h3 id="modalTitle" class="text-sm sm:text-base font-bold text-white">Conexión Serverless: Modal.com ($30/mes Gratis) o Kaggle Silencioso</h3>
+                </div>
+                <button type="button" onclick="toggleKaggleModal()" class="text-slate-400 hover:text-white text-lg font-bold px-2" aria-label="Cerrar ventana">✕</button>
+            </div>
+
+            <!-- Pestañas Modal.com vs Kaggle Silencioso -->
+            <div class="flex gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
+                <button type="button" id="tabGuideModal" onclick="switchCloudTab('modal')" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold transition">
+                    🚀 Opción 1: Modal.com (Recomendado - URL Fija 24/7)
+                </button>
+                <button type="button" id="tabGuideKaggle" onclick="switchCloudTab('kaggle')" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white text-xs font-medium transition">
+                    🔇 Opción 2: Kaggle Modo Silencioso (0% RAM)
+                </button>
+            </div>
+
+            <div class="text-xs text-slate-300 space-y-3">
+                <!-- PANEL 1: MODAL.COM SERVERLESS -->
+                <div id="panelGuideModal" class="space-y-3">
+                    <div class="bg-indigo-950/50 border border-indigo-700/70 rounded-xl p-3.5 space-y-1.5">
+                        <strong class="text-indigo-300 text-xs sm:text-sm block">✨ Ya incluimos el archivo <code>backend/modal_app.py</code> en tu proyecto</strong>
+                        <p class="text-[11px] text-slate-300 leading-relaxed">
+                            Configura automáticamente <strong>Lustify! SDXL v2.0 (+18 / Inpainting)</strong> + <strong>Wan 2.1 I2V 480P</strong> + <strong>LoRAs ligeros</strong> en una sola URL permanente. Solo despierta la GPU cuando pulsas <em>Generar</em> y se apaga sola a $0.00 al terminar.
+                        </p>
+                    </div>
+
+                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2">
+                        <div class="flex flex-wrap justify-between items-center gap-2">
+                            <strong class="text-purple-400">Ejecuta estos 3 comandos una sola vez en tu terminal:</strong>
+                            <button type="button" onclick="copyKaggleScript()" id="copyModalBtn" data-label="Copiar Comandos Modal" class="text-[11px] bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-1 rounded-lg font-medium transition">Copiar Comandos Modal</button>
+                        </div>
+                        <pre id="modalDeployCode" class="bg-slate-900 p-2.5 rounded-lg text-[11px] font-mono text-emerald-300 overflow-x-auto border border-slate-800">pip install modal
+modal setup
+modal deploy backend/modal_app.py</pre>
+                        <p class="text-[10px] text-slate-400">
+                            Al terminar, la terminal te mostrará tu enlace fijo terminado en <code>.modal.run</code>. Pégalo aquí abajo y quedará guardado para siempre.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- PANEL 2: KAGGLE MODO SILENCIOSO (0% RAM) -->
+                <div id="panelGuideKaggle" class="hidden space-y-3">
+                    <div class="bg-emerald-950/30 border border-emerald-700/50 rounded-xl p-3 space-y-1">
+                        <strong class="text-emerald-300 text-xs block">🔇 Solución al consumo de RAM en Kaggle</strong>
+                        <p class="text-[11px] text-slate-300">
+                            Este script descarga <strong>Lustify! SDXL + LoRA</strong> en modo silencioso y redirige todos los logs a archivos internos para que tu navegador nunca más se congele.
+                        </p>
+                    </div>
+                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2">
+                        <div class="flex flex-wrap justify-between items-center gap-2">
+                            <strong class="text-purple-400">Script Kaggle Modo Silencioso (Lustify! SDXL + LoRA):</strong>
+                            <button type="button" onclick="copyKaggleScript()" id="copyKaggleBtn" data-label="Copiar Script Silencioso" class="text-[11px] bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-1 rounded-lg font-medium transition">Copiar Script Silencioso</button>
+                        </div>
+                        <pre id="kaggleSilentCode" class="bg-slate-900 p-2.5 rounded-lg text-[10px] font-mono text-emerald-300 overflow-x-auto border border-slate-800">import subprocess, time, re, requests
+from IPython.display import clear_output
+
+!git clone --depth 1 -q https://github.com/lllyasviel/stable-diffusion-webui-forge.git /kaggle/working/forge
+!mkdir -p /kaggle/working/forge/models/Stable-diffusion /kaggle/working/forge/models/Lora
+!wget -q -nc -O /kaggle/working/forge/models/Stable-diffusion/lustifySDXL.safetensors https://huggingface.co/TheImposterImposters/LUSTIFY-v2.0/resolve/main/lustifySDXLNSFWSFW_v20.safetensors
+!wget -q -nc -O /kaggle/working/forge/models/Lora/add-detail-xl.safetensors https://huggingface.co/LyliaEngine/add-detail-xl/resolve/main/add-detail-xl.safetensors
+!wget -q -nc https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O /kaggle/working/cloudflared
+!chmod +x /kaggle/working/cloudflared
+
+t_log = open('/kaggle/working/tunnel.log', 'w')
+w_log = open('/kaggle/working/webui.log', 'w')
+subprocess.Popen(['/kaggle/working/cloudflared', 'tunnel', '--url', 'http://127.0.0.1:7860'], stdout=t_log, stderr=t_log)
+srv = subprocess.Popen(['python', 'launch.py', '--api', '--listen', '--cors-allow-origins=*'], cwd='/kaggle/working/forge', stdout=w_log, stderr=w_log)
+
+url = None
+while not url:
+    time.sleep(2)
+    with open('/kaggle/working/tunnel.log') as f:
+        m = re.search(r'https://[-a-z0-9.]*\.trycloudflare\.com', f.read())
+        if m: url = m.group(0)
+
+clear_output()
+print(f"URL LISTA (0% RAM): {url}")
+srv.wait()</pre>
+                    </div>
+                </div>
+
+                <!-- Enlace del servidor + Preparación para GitHub Pages -->
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2">
+                    <strong class="text-emerald-400 block">Enlace de tu Servidor (Se guarda automáticamente en tu navegador)</strong>
+                    <div class="flex gap-2">
+                        <input type="url" id="modalApiUrl" value="https://leonardo-sh170--estudio-ia-serverless-api.us-east.modal.run"
+                               oninput="saveApiUrlSetting(this.value)"
+                               placeholder="https://tu-usuario--estudio-ia-serverless-api.modal.run"
+                               class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-indigo-500">
+                        <button type="button" onclick="checkServerStatus()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-slate-700 rounded-lg text-xs font-semibold transition shrink-0">
+                            Probar Conexión
+                        </button>
+                    </div>
+
+                    <div class="pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2">
+                        <div class="text-[11px] text-slate-400">
+                            <strong class="text-slate-200">🚀 Lista para GitHub Pages:</strong> Comparte o abre tu app con tu URL de Modal ya conectada.
+                        </div>
+                        <button type="button" onclick="copyShareableUrl()" id="btnCopyShareUrl" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-slate-700 px-2.5 py-1.5 rounded-lg font-semibold transition">
+                            🔗 Copiar Link con GPU autoconectada
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-2 border-t border-slate-800">
+                <button type="button" onclick="toggleKaggleModal()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition">Listo, Guardar y Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Módulos de la Aplicación -->
+    <script src="js/presets.js" defer></script>
+    <script src="js/storage.js" defer></script>
+    <script src="js/api.js" defer></script>
+    <script src="js/viewer.js" defer></script>
+    <script src="js/app.js" defer></script>
+</body>
+</html>

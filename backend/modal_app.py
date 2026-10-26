@@ -1,0 +1,1894 @@
+"""
+Servidor Serverless de Estudio IA en Modal.com
+----------------------------------------------
+Imagen:
+- Checkpoint completo LUSTIFY SDXL Inpainting (9 canales), sin mezclar
+  text-encoders/VAE/UNet de repositorios distintos.
+- Máscara automática estilo VTON: SegFormer ATR para ropa/cuerpo + YOLOv8 Pose
+  para torso, manos y ControlNet OpenPose.
+- Protección explícita de cara, cabello, accesorios, brazos, manos y piernas.
+- `padding_mask_crop`, `strength=1.0`, composición por máscara suavizada.
+
+Video:
+- Wan 2.1 I2V Lightning a 81 fotogramas por segmento.
+- Videos de 5s/10s/20s generados como 1/2/4 segmentos consecutivos, usando el
+  último fotograma real como imagen inicial del siguiente segmento.
+"""
+
+import base64
+import io
+import os
+import tempfile
+import modal
+
+# =====================================================================
+# 1. REPOSITORIOS PÚBLICOS VERIFICADOS (HUGGINGFACE / CIVITAI)
+# =====================================================================
+
+SDXL_BASE_REPO = "TheImposterImposters/LUSTIFY-v2.0"
+SDXL_BASE_DIR = "/root/models/lustify_sdxl"
+
+SDXL_INPAINT_REPO = "andro-flock/LUSTIFY-SDXL-NSFW-checkpoint-v2-0-INPAINTING"
+SDXL_INPAINT_DIR = "/root/models/lustify_inpaint_full"
+
+SDXL_OPENPOSE_CONTROLNET_REPO = "xinsir/controlnet-openpose-sdxl-1.0"
+SDXL_OPENPOSE_CONTROLNET_DIR = "/root/models/openpose_sdxl_controlnet"
+
+SDXL_LORA_URL = (
+    "https://huggingface.co/LyliaEngine/add-detail-xl/"
+    "resolve/main/add-detail-xl.safetensors"
+)
+SDXL_LORA_PATH = "/root/models/add-detail-xl.safetensors"
+
+REAL_ESRGAN_URL = (
+    "https://github.com/xinntao/Real-ESRGAN/releases/download/"
+    "v0.1.0/RealESRGAN_x4plus.pth"
+)
+REAL_ESRGAN_PATH = "/root/models/RealESRGAN_x4plus.pth"
+
+CLOTH_SEG_REPO = "mattmdjaga/segformer_b2_clothes"
+CLOTH_SEG_DIR = "/root/models/segformer_clothes"
+
+WAN_LIGHTNING_BF16_REPO = "magespace/Wan2.1-I2V-14B-480P-Lightning-Diffusers"
+
+CIVITAI_WAN_LORAS = {
+    "str1p": (
+        "https://huggingface.co/Chroma111/CivitAI-Archive/resolve/main/"
+        "wan_video/str1p_v1.safetensors"
+    ),
+    "tittydrop": (
+        "https://huggingface.co/Chroma111/CivitAI-Archive/resolve/main/"
+        "wan_video/I2V-tittydrop-e26.safetensors"
+    ),
+    "clothes_on_off": (
+        "https://huggingface.co/Chroma111/CivitAI-Archive/resolve/main/"
+        "wan_video/Wan_ClothesOnOff_Trend.safetensors"
+    ),
+    "bounce": (
+        "https://huggingface.co/wangkanai/wan21-fp8-loras-nsfw/resolve/main/"
+        "loras/wan/wan21-action-bounce-v1.safetensors"
+    ),
+    "boob_grab": (
+        "https://huggingface.co/Chroma111/CivitAI-Archive/resolve/main/"
+        "wan_video/boob_grab_epoch045.safetensors"
+    ),
+}
+
+VOLUME_PATH = "/models"
+vol = modal.Volume.from_name("estudio-ia-models-vol", create_if_missing=True)
+
+
+def download_base_sdxl():
+    """Paso 1 de caché."""
+    import urllib.request
+    from huggingface_hub import snapshot_download
+
+    os.makedirs(SDXL_BASE_DIR, exist_ok=True)
+    snapshot_download(
+        repo_id=SDXL_BASE_REPO,
+        local_dir=SDXL_BASE_DIR,
+        allow_patterns=[
+            "*.json",
+            "*.txt",
+            "*/*.json",
+            "*/*.txt",
+            "*/*.fp16.safetensors",
+        ],
+    )
+    urllib.request.urlretrieve(SDXL_LORA_URL, SDXL_LORA_PATH)
+
+
+def download_inpaint_and_segmenter():
+    """Descarga el checkpoint completo de inpainting, pose y segmentación."""
+    import urllib.request
+
+    from huggingface_hub import snapshot_download
+    from ultralytics import YOLO
+
+    os.makedirs(SDXL_INPAINT_DIR, exist_ok=True)
+    snapshot_download(
+        repo_id=SDXL_INPAINT_REPO,
+        local_dir=SDXL_INPAINT_DIR,
+        allow_patterns=[
+            "model_index.json",
+            "scheduler/*.json",
+            "text_encoder/*.json",
+            "text_encoder/*.safetensors",
+            "text_encoder_2/*.json",
+            "text_encoder_2/*.safetensors",
+            "tokenizer/*",
+            "tokenizer_2/*",
+            "unet/*.json",
+            "unet/*.safetensors",
+            "vae/*.json",
+            "vae/*.safetensors",
+        ],
+    )
+
+    os.makedirs(SDXL_OPENPOSE_CONTROLNET_DIR, exist_ok=True)
+    snapshot_download(
+        repo_id=SDXL_OPENPOSE_CONTROLNET_REPO,
+        local_dir=SDXL_OPENPOSE_CONTROLNET_DIR,
+        allow_patterns=["config.json", "diffusion_pytorch_model.safetensors"],
+    )
+
+    os.makedirs(CLOTH_SEG_DIR, exist_ok=True)
+    snapshot_download(
+        repo_id=CLOTH_SEG_REPO,
+        local_dir=CLOTH_SEG_DIR,
+        allow_patterns=["*.json", "model.safetensors"],
+    )
+
+    if not os.path.exists(REAL_ESRGAN_PATH):
+        urllib.request.urlretrieve(REAL_ESRGAN_URL, REAL_ESRGAN_PATH)
+
+    YOLO("/root/models/yolov8n-pose.pt")
+
+
+engine_image = (
+    modal.Image.debian_slim(python_version="3.11")
+    .apt_install("wget", "ffmpeg", "libgl1", "libglib2.0-0")
+    .pip_install(
+        "torch==2.6.0",
+        "torchvision==0.21.0",
+        "diffusers==0.34.0",
+        "transformers==4.49.0",
+        "accelerate==1.4.0",
+        "peft>=0.15.0",
+        "safetensors==0.5.2",
+        "fastapi[standard]==0.115.8",
+        "pillow==11.1.0",
+        "imageio==2.37.0",
+        "imageio-ffmpeg==0.6.0",
+        "ftfy==6.3.1",
+        "omegaconf==2.3.0",
+        "huggingface_hub[hf_xet]>=0.29.0",
+        "opencv-python-headless==4.11.0.86",
+        "ultralytics==8.3.75",
+    )
+    .env({"HF_XET_HIGH_PERFORMANCE": "1"})
+    .run_function(download_base_sdxl)
+    .run_function(download_inpaint_and_segmenter)
+)
+
+app = modal.App("estudio-ia-serverless", image=engine_image)
+
+
+def get_sdxl_native_dimensions(w: int, h: int) -> tuple[int, int]:
+    """Calcula la resolución nativa SDXL (~1 MP) según la proporción."""
+    aspect = w / h if h > 0 else 1.0
+    if aspect < 0.78:
+        return 832, 1216
+    elif aspect < 0.92:
+        return 896, 1152
+    elif aspect <= 1.08:
+        return 1024, 1024
+    elif aspect <= 1.28:
+        return 1152, 896
+    else:
+        return 1216, 832
+
+
+# =====================================================================
+# MOTOR 1: INPAINTING 9-CANALES CON PROTECCIÓN DE BRAZOS, PIERNAS Y FONDO
+# =====================================================================
+@app.cls(
+    gpu="A100-80GB",
+    scaledown_window=180,
+    timeout=300,
+)
+class ImageEngine:
+    @modal.enter()
+    def setup(self):
+        import torch
+        from diffusers import (
+            ControlNetModel,
+            DPMSolverMultistepScheduler,
+            StableDiffusionXLControlNetInpaintPipeline,
+            StableDiffusionXLPipeline,
+        )
+        from transformers import (
+            AutoImageProcessor,
+            AutoModelForSemanticSegmentation,
+        )
+        from ultralytics import YOLO
+
+        self.cloth_processor = AutoImageProcessor.from_pretrained(
+            CLOTH_SEG_DIR, local_files_only=True
+        )
+        self.cloth_model = (
+            AutoModelForSemanticSegmentation.from_pretrained(
+                CLOTH_SEG_DIR, local_files_only=True
+            )
+            .to("cuda")
+            .eval()
+        )
+        self.pose_model = YOLO("/root/models/yolov8n-pose.pt")
+        self._txt2img = None
+        self._real_esrgan = None
+        self._txt2img_cls = StableDiffusionXLPipeline
+        self._torch = torch
+
+        self.inpaint_scheduler = DPMSolverMultistepScheduler(
+            beta_start=0.00085,
+            beta_end=0.012,
+            beta_schedule="scaled_linear",
+            num_train_timesteps=1000,
+            use_karras_sigmas=True,
+            algorithm_type="sde-dpmsolver++",
+            steps_offset=1,
+        )
+
+        controlnet = ControlNetModel.from_pretrained(
+            SDXL_OPENPOSE_CONTROLNET_DIR,
+            torch_dtype=torch.float16,
+            use_safetensors=True,
+            local_files_only=True,
+        )
+        self.inpaint = StableDiffusionXLControlNetInpaintPipeline.from_pretrained(
+            SDXL_INPAINT_DIR,
+            controlnet=controlnet,
+            scheduler=self.inpaint_scheduler,
+            torch_dtype=torch.float16,
+            use_safetensors=True,
+            local_files_only=True,
+        ).to("cuda")
+        self.inpaint.watermark = None
+        self.inpaint.safety_checker = None
+        self.detail_adapter_loaded = False
+
+        if os.path.exists(SDXL_LORA_PATH):
+            try:
+                self.inpaint.load_lora_weights(
+                    SDXL_LORA_PATH, adapter_name="detail_xl"
+                )
+                self.inpaint.set_adapters(
+                    ["detail_xl"], adapter_weights=[0.65]
+                )
+                self.detail_adapter_loaded = True
+            except Exception as e:
+                print(f"LoRA warn: {e}")
+
+        print(
+            "ImageEngine ready:",
+            self.inpaint.__class__.__name__,
+            "unet_in=",
+            self.inpaint.unet.config.in_channels,
+            "controlnet=",
+            self.inpaint.controlnet.__class__.__name__,
+            "scheduler=",
+            self.inpaint.scheduler.__class__.__name__,
+        )
+
+    def _get_txt2img(self):
+        """Carga txt2img solo cuando el usuario no sube imagen de entrada."""
+        if self._txt2img is None:
+            self._txt2img = self._txt2img_cls.from_pretrained(
+                SDXL_BASE_DIR,
+                torch_dtype=self._torch.float16,
+                variant="fp16",
+                use_safetensors=True,
+                local_files_only=True,
+            ).to("cuda")
+            scheduler_cls = self.inpaint.scheduler.__class__
+            self._txt2img.scheduler = scheduler_cls.from_config(
+                self.inpaint.scheduler.config
+            )
+            self._txt2img.watermark = None
+            self._txt2img.safety_checker = None
+        return self._txt2img
+
+    def _get_real_esrgan(self):
+        """Carga Real-ESRGAN sin depender de basicsr/realesrgan."""
+        if self._real_esrgan is None:
+            import torch
+            import torch.nn as nn
+            import torch.nn.functional as F
+
+            class ResidualDenseBlock(nn.Module):
+                def __init__(self, num_feat=64, num_grow_ch=32):
+                    super().__init__()
+                    self.conv1 = nn.Conv2d(num_feat, num_grow_ch, 3, 1, 1)
+                    self.conv2 = nn.Conv2d(num_feat + num_grow_ch, num_grow_ch, 3, 1, 1)
+                    self.conv3 = nn.Conv2d(num_feat + 2 * num_grow_ch, num_grow_ch, 3, 1, 1)
+                    self.conv4 = nn.Conv2d(num_feat + 3 * num_grow_ch, num_grow_ch, 3, 1, 1)
+                    self.conv5 = nn.Conv2d(num_feat + 4 * num_grow_ch, num_feat, 3, 1, 1)
+                    self.lrelu = nn.LeakyReLU(negative_slope=0.2, inplace=True)
+
+                def forward(self, x):
+                    x1 = self.lrelu(self.conv1(x))
+                    x2 = self.lrelu(self.conv2(torch.cat((x, x1), 1)))
+                    x3 = self.lrelu(self.conv3(torch.cat((x, x1, x2), 1)))
+                    x4 = self.lrelu(self.conv4(torch.cat((x, x1, x2, x3), 1)))
+                    x5 = self.conv5(torch.cat((x, x1, x2, x3, x4), 1))
+                    return x5 * 0.2 + x
+
+            class RRDB(nn.Module):
+                def __init__(self, num_feat, num_grow_ch=32):
+                    super().__init__()
+                    self.rdb1 = ResidualDenseBlock(num_feat, num_grow_ch)
+                    self.rdb2 = ResidualDenseBlock(num_feat, num_grow_ch)
+                    self.rdb3 = ResidualDenseBlock(num_feat, num_grow_ch)
+
+                def forward(self, x):
+                    return self.rdb3(self.rdb2(self.rdb1(x))) * 0.2 + x
+
+            class RRDBNet(nn.Module):
+                def __init__(self, num_in_ch=3, num_out_ch=3, num_feat=64, num_block=23, num_grow_ch=32):
+                    super().__init__()
+                    self.conv_first = nn.Conv2d(num_in_ch, num_feat, 3, 1, 1)
+                    self.body = nn.Sequential(*[RRDB(num_feat, num_grow_ch) for _ in range(num_block)])
+                    self.conv_body = nn.Conv2d(num_feat, num_feat, 3, 1, 1)
+                    self.conv_up1 = nn.Conv2d(num_feat, num_feat, 3, 1, 1)
+                    self.conv_up2 = nn.Conv2d(num_feat, num_feat, 3, 1, 1)
+                    self.conv_hr = nn.Conv2d(num_feat, num_feat, 3, 1, 1)
+                    self.conv_last = nn.Conv2d(num_feat, num_out_ch, 3, 1, 1)
+                    self.lrelu = nn.LeakyReLU(negative_slope=0.2, inplace=True)
+
+                def forward(self, x):
+                    feat = self.conv_first(x)
+                    body_feat = self.conv_body(self.body(feat))
+                    feat = feat + body_feat
+                    feat = self.lrelu(self.conv_up1(F.interpolate(feat, scale_factor=2, mode="nearest")))
+                    feat = self.lrelu(self.conv_up2(F.interpolate(feat, scale_factor=2, mode="nearest")))
+                    return self.conv_last(self.lrelu(self.conv_hr(feat)))
+
+            state = torch.load(REAL_ESRGAN_PATH, map_location="cpu")
+            state = state.get("params_ema") or state.get("params") or state
+            model = RRDBNet().to("cuda", dtype=torch.float16)
+            model.load_state_dict(state, strict=True)
+            self._real_esrgan = model.eval()
+        return self._real_esrgan
+
+    def _enhance_photo(
+        self, image, detail_restore=0.45, color_restore=0.60
+    ):
+        """Restauración no destructiva: denoise, SR 4x y salida final 2x."""
+        import cv2
+        import numpy as np
+        from PIL import Image, ImageEnhance, ImageFilter
+
+        src_rgb = np.array(image)
+        src = cv2.cvtColor(src_rgb, cv2.COLOR_RGB2BGR)
+        gray = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY).astype(np.float32)
+        residual = gray - cv2.GaussianBlur(
+            gray, (0, 0), sigmaX=1.0, sigmaY=1.0
+        )
+        noise_score = float(
+            np.median(np.abs(residual)) * 1.4826
+        )
+        denoise_h = (
+            3
+            if noise_score > 6.0
+            else 2
+            if noise_score > 3.5
+            else 1
+            if noise_score > 1.5
+            else 0
+        )
+        print(
+            "Enhance analysis:",
+            f"noise_sigma={noise_score:.2f} denoise_h={denoise_h}",
+        )
+        if denoise_h > 0:
+            src = cv2.fastNlMeansDenoisingColored(
+                src, None, denoise_h, denoise_h, 7, 21
+            )
+            src_rgb = cv2.cvtColor(src, cv2.COLOR_BGR2RGB)
+        tensor = self._torch.from_numpy(src_rgb).permute(2, 0, 1).unsqueeze(0)
+        tensor = tensor.to("cuda", dtype=self._torch.float16) / 255.0
+        with self._torch.inference_mode():
+            output = self._get_real_esrgan()(tensor)
+        out = output.float().clamp(0, 1).squeeze(0).permute(1, 2, 0)
+        out_np = (out.cpu().numpy() * 255.0).round().astype(np.uint8)
+        upscaled = Image.fromarray(out_np).resize(
+            (image.width * 2, image.height * 2), Image.LANCZOS
+        )
+
+        arr = np.array(upscaled).astype(np.float32)
+        if detail_restore > 0:
+            reference = image.resize(
+                (image.width * 2, image.height * 2), Image.LANCZOS
+            )
+            ref = np.array(reference).astype(np.float32)
+            ref_u8 = np.clip(ref, 0, 255).astype(np.uint8)
+            skin_ycrcb = cv2.cvtColor(
+                ref_u8, cv2.COLOR_RGB2YCrCb
+            )
+            _, skin_cr, skin_cb = cv2.split(skin_ycrcb)
+            skin_mask = (
+                (skin_cr >= 112)
+                & (skin_cr <= 190)
+                & (skin_cb >= 70)
+                & (skin_cb <= 150)
+            ).astype(np.uint8) * 255
+            skin_mask = cv2.morphologyEx(
+                skin_mask,
+                cv2.MORPH_CLOSE,
+                np.ones((5, 5), np.uint8),
+            )
+            skin_mask = cv2.GaussianBlur(
+                skin_mask, (0, 0), sigmaX=3.0, sigmaY=3.0
+            ).astype(np.float32) / 255.0
+
+            out_yuv = cv2.cvtColor(arr, cv2.COLOR_RGB2YUV)
+            ref_yuv = cv2.cvtColor(ref, cv2.COLOR_RGB2YUV)
+            ref_y = ref_yuv[:, :, 0]
+            out_y = out_yuv[:, :, 0]
+            luma_mix = {
+                3: 0.72,
+                2: 0.55,
+                1: 0.34,
+                0: 0.18,
+            }.get(denoise_h, 0.18)
+            luma_mix *= min(1.0, detail_restore / 0.40)
+            skin_luma_mix = luma_mix * 0.40
+            luma_weights = luma_mix * (1.0 - skin_mask) + skin_luma_mix * skin_mask
+            base_y = out_y * luma_weights + ref_y * (1.0 - luma_weights)
+
+            ref_texture = ref_y - cv2.GaussianBlur(
+                ref_y, (0, 0), sigmaX=1.1, sigmaY=1.1
+            )
+            out_texture = out_y - cv2.GaussianBlur(
+                out_y, (0, 0), sigmaX=1.1, sigmaY=1.1
+            )
+            texture_weights = 0.15 + (0.85 * skin_mask)
+            ref_texture_weight, out_texture_weight = {
+                0: (0.90, 0.35),
+                1: (0.60, 0.40),
+                2: (0.35, 0.45),
+                3: (0.18, 0.50),
+            }.get(denoise_h, (0.90, 0.35))
+            base_y = np.clip(
+                base_y
+                + detail_restore
+                * (
+                    ref_texture_weight * ref_texture
+                    + out_texture_weight * out_texture
+                )
+                * texture_weights,
+                0,
+                255,
+            )
+            for channel in (1, 2):
+                out_yuv[:, :, channel] = (
+                    out_yuv[:, :, channel] * (1.0 - color_restore)
+                    + ref_yuv[:, :, channel] * color_restore
+                )
+            clahe_y = cv2.createCLAHE(
+                clipLimit=1.35, tileGridSize=(8, 8)
+            ).apply(np.clip(base_y, 0, 255).astype(np.uint8))
+            contrast_weights = np.clip(
+                detail_restore * (0.10 + 0.30 * skin_mask),
+                0.0,
+                0.24,
+            )
+            out_yuv[:, :, 0] = np.clip(
+                base_y * (1.0 - contrast_weights)
+                + clahe_y * contrast_weights,
+                0,
+                255,
+            )
+            arr = cv2.cvtColor(out_yuv, cv2.COLOR_YUV2RGB)
+
+        upscaled = Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8))
+        return upscaled.filter(
+            ImageFilter.UnsharpMask(radius=1.1, percent=55, threshold=3)
+        )
+
+    @staticmethod
+    def _draw_pose_condition(size, people_kpts, people_conf=None):
+        import numpy as np
+        from PIL import Image, ImageDraw
+
+        w, h = size
+        pose_img = Image.new("RGB", (w, h), (0, 0, 0))
+        draw = ImageDraw.Draw(pose_img)
+        if people_kpts is None or len(people_kpts) == 0:
+            return pose_img, False
+
+        line_w = max(5, int(min(w, h) * 0.008))
+        joint_r = line_w + 1
+        bones = [
+            (17, 5, (255, 0, 0)), (17, 6, (0, 255, 0)),
+            (5, 7, (255, 80, 0)), (7, 9, (255, 160, 0)),
+            (6, 8, (0, 255, 80)), (8, 10, (0, 255, 160)),
+            (17, 18, (180, 0, 255)), (5, 11, (255, 0, 120)),
+            (6, 12, (0, 120, 255)), (11, 13, (255, 0, 220)),
+            (13, 15, (255, 80, 255)), (12, 14, (80, 80, 255)),
+            (14, 16, (80, 220, 255)), (17, 0, (255, 255, 0)),
+            (0, 1, (255, 255, 80)), (1, 3, (255, 200, 80)),
+            (0, 2, (80, 255, 255)), (2, 4, (80, 200, 255)),
+        ]
+        pose_ok = False
+
+        for person_idx, kpts in enumerate(people_kpts):
+            if kpts is None or len(kpts) < 17:
+                continue
+            conf = None
+            if people_conf is not None and person_idx < len(people_conf):
+                conf = people_conf[person_idx]
+
+            pts = np.zeros((19, 2), dtype=np.float32)
+            valid = np.zeros(19, dtype=bool)
+            for i in range(17):
+                x, y = float(kpts[i][0]), float(kpts[i][1])
+                ok = x > 1 and y > 1
+                if conf is not None and i < len(conf):
+                    ok = ok and float(conf[i]) >= 0.25
+                if ok:
+                    pts[i] = (x, y)
+                    valid[i] = True
+
+            if valid[5] and valid[6]:
+                pts[17] = (pts[5] + pts[6]) * 0.5
+                valid[17] = True
+            if valid[11] and valid[12]:
+                pts[18] = (pts[11] + pts[12]) * 0.5
+                valid[18] = True
+
+            for a, b, color in bones:
+                if valid[a] and valid[b]:
+                    draw.line(
+                        [tuple(pts[a]), tuple(pts[b])],
+                        fill=color,
+                        width=line_w,
+                    )
+            for i in range(19):
+                if valid[i]:
+                    x, y = float(pts[i][0]), float(pts[i][1])
+                    draw.ellipse(
+                        [x - joint_r, y - joint_r, x + joint_r, y + joint_r],
+                        fill=(255, 255, 255),
+                    )
+            pose_ok = pose_ok or bool(
+                valid[5] and valid[6] and valid.sum() >= 8
+            )
+
+        return pose_img, pose_ok
+
+    def _analyze_anatomy_and_mask(
+        self, pil_img, mask_target="all_clothes", preserve_limbs=True
+    ):
+        import numpy as np
+        import torch
+        import torch.nn.functional as F
+        from PIL import Image, ImageDraw, ImageFilter
+
+        w, h = pil_img.size
+        img_np = np.array(pil_img)
+
+        inputs = self.cloth_processor(images=pil_img, return_tensors="pt").to(
+            "cuda"
+        )
+        with torch.no_grad():
+            outputs = self.cloth_model(**inputs)
+            logits = F.interpolate(
+                outputs.logits,
+                size=(h, w),
+                mode="bilinear",
+                align_corners=False,
+            )
+            seg_map = logits.argmax(dim=1)[0].cpu().numpy()
+
+        sh_top = int(h * 0.28)
+        torso_h = int(h * 0.36)
+        cx_torso = w // 2
+        half_torso_w = int(w * 0.18)
+        people_kpts = []
+        people_conf = []
+        wrist_pts = []
+        torso_poly_img = Image.new("L", (w, h), 0)
+        torso_draw = ImageDraw.Draw(torso_poly_img)
+        upper_zone_img = Image.new("L", (w, h), 0)
+        upper_zone_draw = ImageDraw.Draw(upper_zone_img)
+        torso_drawn = False
+
+        def draw_torso_area(draw, cx, shoulder_top, height, half_width):
+            top_y = int(shoulder_top - height * 0.03)
+            chest_y = int(shoulder_top + height * 0.20)
+            waist_y = int(shoulder_top + height * 0.60)
+            bottom_y = int(
+                shoulder_top
+                + height * (0.58 if mask_target == "upper_clothes" else 1.04)
+            )
+            draw.polygon(
+                [
+                    (max(0, cx - int(half_width * 0.88)), max(0, top_y)),
+                    (min(w, cx + int(half_width * 0.88)), max(0, top_y)),
+                    (min(w, cx + half_width), min(h, chest_y)),
+                    (min(w, cx + int(half_width * 0.68)), min(h, waist_y)),
+                    (min(w, cx + int(half_width * 0.76)), min(h, bottom_y)),
+                    (max(0, cx - int(half_width * 0.76)), min(h, bottom_y)),
+                    (max(0, cx - int(half_width * 0.68)), min(h, waist_y)),
+                    (max(0, cx - half_width), min(h, chest_y)),
+                ],
+                fill=255,
+            )
+
+        seg_head_np = np.isin(seg_map, [1, 2, 3, 11]).astype(np.uint8) * 255
+        head_area = Image.new("L", (w, h), 0)
+        head_area_draw = ImageDraw.Draw(head_area)
+        head_area_from_pose = False
+        person_box_area = Image.new("L", (w, h), 0)
+        person_box_draw = ImageDraw.Draw(person_box_area)
+        person_box_from_pose = False
+        person_box_bounds = []
+        limb_pose_area = Image.new("L", (w, h), 0)
+        limb_pose_draw = ImageDraw.Draw(limb_pose_area)
+        body_hull_np = np.zeros((h, w), dtype=np.uint8)
+
+        try:
+            pose_res = self.pose_model.predict(img_np, verbose=False)
+            if (
+                pose_res
+                and pose_res[0].keypoints is not None
+                and len(pose_res[0].keypoints.xy) > 0
+            ):
+                people_kpts = pose_res[0].keypoints.xy.cpu().numpy()
+                raw_conf = getattr(pose_res[0].keypoints, "conf", None)
+                if raw_conf is not None and len(raw_conf) > 0:
+                    people_conf = raw_conf.cpu().numpy()
+
+                raw_boxes = getattr(pose_res[0], "boxes", None)
+                if raw_boxes is not None and raw_boxes.xyxy is not None:
+                    boxes = raw_boxes.xyxy.cpu().numpy()
+                    for box in boxes:
+                        x1, y1, x2, y2 = [float(v) for v in box[:4]]
+                        person_box_bounds.append(
+                            [int(x1), int(y1), int(x2), int(y2)]
+                        )
+                        pad_x = max(8, int((x2 - x1) * 0.10))
+                        pad_y = max(8, int((y2 - y1) * 0.06))
+                        person_box_draw.rectangle(
+                            [
+                                max(0, int(x1 - pad_x)),
+                                max(0, int(y1 - pad_y)),
+                                min(w, int(x2 + pad_x)),
+                                min(h, int(y2 + pad_y)),
+                            ],
+                            fill=255,
+                        )
+                        person_box_from_pose = True
+
+                for person_idx, kpts in enumerate(people_kpts):
+                    if kpts is None or len(kpts) < 17:
+                        continue
+                    conf = None
+                    if people_conf is not None and person_idx < len(people_conf):
+                        conf = people_conf[person_idx]
+
+                    def kp_ok(idx):
+                        if kpts[idx][0] <= 1 or kpts[idx][1] <= 1:
+                            return False
+                        return conf is None or float(conf[idx]) >= 0.25
+
+                    body_pts = [
+                        kpts[i] for i in range(5, 17) if kp_ok(i)
+                    ]
+                    if len(body_pts) >= 3:
+                        import cv2
+
+                        hull_pts = np.array(
+                            body_pts, dtype=np.int32
+                        ).reshape(-1, 1, 2)
+                        hull = cv2.convexHull(hull_pts)
+                        cv2.fillConvexPoly(body_hull_np, hull, 255)
+
+                    head_pts = [kpts[i] for i in range(5) if kp_ok(i)]
+                    sh_pts = [kpts[i] for i in (5, 6) if kp_ok(i)]
+                    hip_pts = [kpts[i] for i in (11, 12) if kp_ok(i)]
+                    wrist_pts.extend(
+                        [kpts[i] for i in (9, 10) if kp_ok(i)]
+                    )
+
+                    if len(sh_pts) != 2:
+                        continue
+
+                    ls, rs = sh_pts[0], sh_pts[1]
+                    p_sh_top = int(min(float(ls[1]), float(rs[1])))
+                    sh_dist = max(40.0, abs(float(ls[0]) - float(rs[0])))
+                    p_cx = int((float(ls[0]) + float(rs[0])) * 0.5)
+                    p_half = int(sh_dist * 0.52)
+                    arm_w = max(56, int(sh_dist * 0.42))
+                    leg_w = max(68, int(sh_dist * 0.48))
+                    for a, b in [(5, 7), (7, 9), (6, 8), (8, 10)]:
+                        if kp_ok(a) and kp_ok(b):
+                            limb_pose_draw.line(
+                                [
+                                    (float(kpts[a][0]), float(kpts[a][1])),
+                                    (float(kpts[b][0]), float(kpts[b][1])),
+                                ],
+                                fill=255,
+                                width=arm_w,
+                            )
+                    for a, b in [
+                        (11, 13),
+                        (13, 15),
+                        (12, 14),
+                        (14, 16),
+                    ]:
+                        if kp_ok(a) and kp_ok(b):
+                            limb_pose_draw.line(
+                                [
+                                    (float(kpts[a][0]), float(kpts[a][1])),
+                                    (float(kpts[b][0]), float(kpts[b][1])),
+                                ],
+                                fill=255,
+                                width=leg_w,
+                            )
+                    if len(hip_pts) == 2:
+                        lh, rh = hip_pts[0], hip_pts[1]
+                        hip_y = int(max(float(lh[1]), float(rh[1])))
+                        p_torso_h = max(80, hip_y - p_sh_top)
+                    else:
+                        p_torso_h = int(sh_dist * 1.38)
+
+                    if not torso_drawn:
+                        sh_top = p_sh_top
+                        torso_h = p_torso_h
+                        cx_torso = p_cx
+                        half_torso_w = p_half
+
+                    draw_torso_area(
+                        torso_draw,
+                        p_cx,
+                        p_sh_top,
+                        p_torso_h,
+                        p_half,
+                    )
+                    upper_zone_draw.rectangle(
+                        [
+                            max(0, p_cx - int(p_half * 1.35)),
+                            max(0, int(p_sh_top - p_torso_h * 0.05)),
+                            min(w, p_cx + int(p_half * 1.35)),
+                            min(h, int(p_sh_top + p_torso_h * 0.62)),
+                        ],
+                        fill=255,
+                    )
+                    torso_drawn = True
+
+                    if head_pts:
+                        xs = [float(p[0]) for p in head_pts]
+                        ys = [float(p[1]) for p in head_pts]
+                        hcx = int(sum(xs) / len(xs))
+                        hcy = int(sum(ys) / len(ys))
+                        rad = max(
+                            int((p_sh_top - hcy) * 0.90), int(sh_dist * 0.36)
+                        )
+                    else:
+                        hcx = p_cx
+                        hcy = int(p_sh_top - sh_dist * 0.42)
+                        rad = int(sh_dist * 0.48)
+
+                    head_area_draw.ellipse(
+                        [
+                            hcx - int(rad * 1.18),
+                            hcy - int(rad * 1.45),
+                            hcx + int(rad * 1.18),
+                            hcy + int(rad * 0.55),
+                        ],
+                        fill=255,
+                    )
+                    head_area_from_pose = True
+        except Exception as e:
+            print(f"Pose warn: {e}")
+
+        pose_img, pose_ok = self._draw_pose_condition(
+            (w, h), people_kpts, people_conf
+        )
+
+        if not torso_drawn:
+            draw_torso_area(
+                torso_draw,
+                cx_torso,
+                sh_top,
+                torso_h,
+                half_torso_w,
+            )
+            upper_zone_draw.rectangle(
+                [
+                    max(0, cx_torso - int(half_torso_w * 1.35)),
+                    max(0, int(sh_top - torso_h * 0.05)),
+                    min(w, cx_torso + int(half_torso_w * 1.35)),
+                    min(h, int(sh_top + torso_h * 0.62)),
+                ],
+                fill=255,
+            )
+
+        torso_np = np.array(torso_poly_img, dtype=np.uint8)
+        upper_zone_np = np.array(upper_zone_img, dtype=np.uint8) > 128
+
+        if mask_target == "upper_clothes":
+            cloth_raw = np.isin(seg_map, [4, 8])
+            dress_m = seg_map == 7
+            cloth_raw = cloth_raw | (dress_m & upper_zone_np)
+            lower_cloth_protect = np.isin(seg_map, [5, 6]) | (
+                dress_m & ~upper_zone_np
+            )
+        else:
+            cloth_raw = np.isin(
+                seg_map, [4, 5, 6, 7, 8, 9, 10, 17]
+            )
+            lower_cloth_protect = np.zeros_like(cloth_raw)
+
+        clothes_np = np.array(
+            Image.fromarray(cloth_raw.astype(np.uint8) * 255, mode="L").filter(
+                ImageFilter.MaxFilter(15)
+            ),
+            dtype=np.uint8,
+        )
+        torso_np = np.array(
+            Image.fromarray(torso_np, mode="L").filter(
+                ImageFilter.MaxFilter(5)
+            ),
+            dtype=np.uint8,
+        )
+        active_np = np.maximum(clothes_np, torso_np)
+
+        person_np = (seg_map != 0).astype(np.uint8) * 255
+        person_area = np.array(
+            Image.fromarray(person_np, mode="L").filter(
+                ImageFilter.MaxFilter(11)
+            ),
+            dtype=np.uint8,
+        )
+        if person_box_from_pose:
+            person_box_np = np.array(person_box_area, dtype=np.uint8)
+            person_area[person_box_np <= 128] = 0
+        try:
+            import cv2
+
+            person_area = cv2.morphologyEx(
+                person_area,
+                cv2.MORPH_CLOSE,
+                np.ones((25, 25), dtype=np.uint8),
+            )
+            inverted = cv2.bitwise_not(person_area)
+            labels_n, labels, stats, _ = cv2.connectedComponentsWithStats(
+                inverted, connectivity=8
+            )
+            for label_idx in range(1, labels_n):
+                x0, y0, bw, bh, area = stats[label_idx]
+                touches_border = (
+                    x0 == 0
+                    or y0 == 0
+                    or x0 + bw == w
+                    or y0 + bh == h
+                )
+                if not touches_border and area < int(w * h * 0.03):
+                    person_area[labels == label_idx] = 255
+            person_area = cv2.dilate(
+                person_area, np.ones((5, 5), dtype=np.uint8), iterations=1
+            )
+        except Exception as e:
+            print(f"person silhouette warn: {e}")
+        if np.count_nonzero(person_area) < int(w * h * 0.02):
+            person_area = np.full((h, w), 255, dtype=np.uint8)
+
+        active_np[person_area <= 128] = 0
+        if mask_target == "all_clothes" and not preserve_limbs:
+            try:
+                import cv2
+
+                person_full_area = cv2.dilate(
+                    person_area,
+                    np.ones((15, 15), dtype=np.uint8),
+                    iterations=1,
+                )
+            except Exception:
+                person_full_area = person_area
+            active_np = np.maximum(active_np, person_full_area)
+            limb_pose_np = np.array(limb_pose_area, dtype=np.uint8)
+            if person_box_from_pose:
+                limb_pose_np[person_box_np <= 128] = 0
+            active_np = np.maximum(active_np, limb_pose_np)
+            if person_box_from_pose:
+                body_hull_np[person_box_np <= 128] = 0
+            try:
+                import cv2
+
+                active_np = np.maximum(
+                    active_np,
+                    cv2.dilate(
+                        body_hull_np,
+                        np.ones((9, 9), dtype=np.uint8),
+                        iterations=1,
+                    ),
+                )
+            except Exception:
+                active_np = np.maximum(active_np, body_hull_np)
+        elif mask_target == "upper_clothes" and not preserve_limbs:
+            upper_body_area = np.where(
+                (person_area > 128)
+                & (
+                    np.arange(h, dtype=np.int32)[:, None]
+                    < int(sh_top + torso_h * 0.82)
+                ),
+                255,
+                0,
+            ).astype(np.uint8)
+            try:
+                import cv2
+
+                upper_body_area = cv2.dilate(
+                    upper_body_area,
+                    np.ones((15, 15), dtype=np.uint8),
+                    iterations=1,
+                )
+            except Exception:
+                pass
+            active_np = np.maximum(active_np, upper_body_area)
+
+        head_area_np = np.array(head_area, dtype=np.uint8)
+        if not head_area_from_pose:
+            head_area_np = np.zeros((h, w), dtype=np.uint8)
+            head_area_np[: int(h * 0.40), int(w * 0.10) : int(w * 0.90)] = 255
+
+        protect_np = np.where(head_area_np > 128, seg_head_np, 0)
+        if head_area_from_pose:
+            protect_np = np.maximum(protect_np, head_area_np)
+
+        limb_classes = [12, 13, 14, 15]
+        limb_raw_np = np.isin(seg_map, limb_classes)
+        limbs_np = limb_raw_np.astype(np.uint8) * 255
+        limbs_np = np.array(
+            Image.fromarray(limbs_np, mode="L").filter(
+                ImageFilter.MaxFilter(3)
+            ),
+            dtype=np.uint8,
+        )
+        skin_ref_np = np.isin(seg_map, [11, 14, 15])
+        skin_ref_rgb = None
+        rgb_dist = None
+        limbs_skin_np = limbs_np
+        if np.count_nonzero(skin_ref_np) >= 200:
+            skin_ref_rgb = np.median(
+                img_np[skin_ref_np].astype(np.float32), axis=0
+            )
+            rgb_dist = np.sqrt(
+                np.sum(
+                    np.square(img_np.astype(np.float32) - skin_ref_rgb),
+                    axis=2,
+                )
+            )
+            limbs_skin_np = np.where(
+                limb_raw_np & (rgb_dist < 75.0), 255, 0
+            ).astype(np.uint8)
+            limbs_skin_np = np.array(
+                Image.fromarray(limbs_skin_np, mode="L").filter(
+                    ImageFilter.MaxFilter(3)
+                ),
+                dtype=np.uint8,
+            )
+        accessory_classes = [] if mask_target == "all_clothes" else [9, 10, 16]
+        accessory_np = np.isin(seg_map, accessory_classes).astype(np.uint8) * 255
+
+        if preserve_limbs:
+            protect_np = np.maximum(protect_np, limbs_skin_np)
+        protect_np = np.maximum(protect_np, accessory_np)
+        protect_np = np.maximum(
+            protect_np, lower_cloth_protect.astype(np.uint8) * 255
+        )
+
+        hand_guard = Image.fromarray(np.zeros((h, w), dtype=np.uint8), "L")
+        hand_draw = ImageDraw.Draw(hand_guard)
+        hand_r = max(22, int(half_torso_w * 0.28))
+        for pt in wrist_pts:
+            x, y = float(pt[0]), float(pt[1])
+            hand_draw.ellipse(
+                [x - hand_r, y - hand_r, x + hand_r, y + hand_r], fill=255
+            )
+        hand_guard_np = np.array(hand_guard)
+        if rgb_dist is not None:
+            hand_guard_np = np.where(
+                (hand_guard_np > 0) & (rgb_dist < 85.0), 255, 0
+            ).astype(np.uint8)
+            hand_guard_np = np.array(
+                Image.fromarray(hand_guard_np, mode="L").filter(
+                    ImageFilter.MaxFilter(3)
+                ),
+                dtype=np.uint8,
+            )
+        protect_np = np.maximum(protect_np, hand_guard_np)
+
+        cloth_context_np = np.array(
+            Image.fromarray(cloth_raw.astype(np.uint8) * 255, mode="L").filter(
+                ImageFilter.MaxFilter(25)
+            ),
+            dtype=np.uint8,
+        )
+        protect_np[cloth_context_np > 128] = 0
+
+        protect_np = np.maximum(protect_np, hand_guard_np)
+        protect_np = np.maximum(
+            protect_np, lower_cloth_protect.astype(np.uint8) * 255
+        )
+
+        active_np[protect_np > 128] = 0
+        skin_sample_np = np.isin(seg_map, [11, 14, 15])
+        skin_sample_np &= active_np <= 128
+        skin_rgb = None
+        if np.count_nonzero(skin_sample_np) >= 200:
+            skin_rgb = np.median(
+                img_np[skin_sample_np].astype(np.float32), axis=0
+            ).tolist()
+        elif skin_ref_rgb is not None:
+            skin_rgb = skin_ref_rgb.tolist()
+
+        mask_ratio = float(np.count_nonzero(active_np) / float(w * h))
+        if mask_ratio < 0.012:
+            active_np = np.where(person_area > 128, torso_np, 0)
+            active_np[protect_np > 128] = 0
+            mask_ratio = float(np.count_nonzero(active_np) / float(w * h))
+
+        blend_source_np = np.where(person_area > 128, active_np, 0)
+        blend_np = np.array(
+            Image.fromarray(blend_source_np, mode="L").filter(
+                ImageFilter.GaussianBlur(12)
+            ),
+            dtype=np.uint8,
+        )
+        blend_allowed_np = np.array(
+            Image.fromarray(person_area, mode="L").filter(
+                ImageFilter.MaxFilter(3)
+            ),
+            dtype=np.uint8,
+        )
+        blend_np[blend_allowed_np <= 128] = 0
+
+        class_ids, class_counts = np.unique(seg_map, return_counts=True)
+        anatomy_info = {
+            "seg_classes": {
+                str(int(class_id)): int(count)
+                for class_id, count in zip(class_ids, class_counts)
+            },
+            "sh_top": sh_top,
+            "torso_h": torso_h,
+            "cx_torso": cx_torso,
+            "half_torso_w": half_torso_w,
+            "mask_ratio": mask_ratio,
+            "pose_ok": pose_ok,
+            "people": len(people_kpts),
+            "person_box_from_pose": person_box_from_pose,
+            "person_box_bounds": person_box_bounds,
+            "skin_rgb": skin_rgb,
+        }
+        return (
+            Image.fromarray(active_np, mode="L"),
+            pose_img,
+            anatomy_info,
+            Image.fromarray(blend_np, mode="L"),
+        )
+
+    @staticmethod
+    def _generic_negative_prompt():
+        return (
+            "bad anatomy, extra limbs, extra fingers, missing fingers, "
+            "deformed hands, distorted torso, extra breasts, bad nipples, "
+            "cut arms, blurry, lowres, worst quality, low quality, watermark"
+        )
+
+    @modal.method()
+    def generate(self, payload: dict) -> str:
+        from PIL import Image
+
+        prompt = str(payload.get("prompt", "")).strip()
+        clean_prompt = (
+            prompt
+            + ", same person, same face, same hairstyle, same pose, "
+            + "same skin tone as the visible face and arms, photorealistic, "
+            + "natural skin texture, coherent anatomy"
+        )
+        negative_prompt = (
+            payload.get("negative_prompt") or self._generic_negative_prompt()
+        )
+        steps = max(20, min(42, int(payload.get("steps") or 30)))
+        cfg_scale = max(3.0, min(7.0, float(payload.get("cfg_scale") or 5.0)))
+        lora_scale = max(
+            0.0, min(1.0, float(payload.get("lora_scale") or 0.0))
+        )
+        mask_target = payload.get("mask_target", "all_clothes")
+
+        init_images = payload.get("init_images") or []
+
+        if not init_images:
+            target_w, target_h = get_sdxl_native_dimensions(
+                int(payload.get("width", 832)),
+                int(payload.get("height", 1216)),
+            )
+            out_img = self._get_txt2img()(
+                prompt=clean_prompt,
+                negative_prompt=negative_prompt,
+                num_inference_steps=steps,
+                guidance_scale=cfg_scale,
+                width=target_w,
+                height=target_h,
+            ).images[0]
+            buf = io.BytesIO()
+            out_img.save(buf, format="PNG")
+            return base64.b64encode(buf.getvalue()).decode("utf-8")
+
+        raw_img = init_images[0]
+        if "," in raw_img:
+            raw_img = raw_img.split(",", 1)[1]
+        orig_img = Image.open(
+            io.BytesIO(base64.b64decode(raw_img))
+        ).convert("RGB")
+        orig_w, orig_h = orig_img.size
+
+        sdxl_w, sdxl_h = get_sdxl_native_dimensions(orig_w, orig_h)
+        work_img = orig_img.resize((sdxl_w, sdxl_h), Image.LANCZOS)
+
+        if mask_target == "enhance":
+            try:
+                detail_restore = max(
+                    0.0,
+                    min(
+                        0.5,
+                        float(payload.get("detail_restore") or 0.45),
+                    ),
+                )
+                color_restore = max(
+                    0.0,
+                    min(
+                        1.0,
+                        float(payload.get("color_restore") or 0.95),
+                    ),
+                )
+                generated = self._enhance_photo(
+                    orig_img,
+                    detail_restore=detail_restore,
+                    color_restore=color_restore,
+                )
+                buf = io.BytesIO()
+                generated.save(buf, format="PNG")
+                return base64.b64encode(buf.getvalue()).decode("utf-8")
+            except Exception as e:
+                print(f"RealESRGAN fallback warn: {e}")
+
+            import cv2
+            import numpy as np
+            from PIL import ImageEnhance, ImageFilter
+
+            source_arr = cv2.cvtColor(
+                np.array(work_img), cv2.COLOR_RGB2BGR
+            )
+            clean_source = cv2.fastNlMeansDenoisingColored(
+                source_arr, None, 5, 5, 7, 21
+            )
+            work_img = Image.fromarray(
+                cv2.cvtColor(clean_source, cv2.COLOR_BGR2RGB)
+            )
+
+            enhance_strength = max(
+                0.12,
+                min(0.55, float(payload.get("denoising_strength") or 0.32)),
+            )
+            generator = None
+            seed = payload.get("seed")
+            if seed is not None:
+                generator = self._torch.Generator(device="cuda").manual_seed(
+                    int(seed)
+                )
+            try:
+                (
+                    _,
+                    pose_img,
+                    enhance_anatomy,
+                    _,
+                ) = self._analyze_anatomy_and_mask(
+                    work_img,
+                    mask_target="all_clothes",
+                    preserve_limbs=True,
+                )
+            except Exception:
+                pose_img = Image.new("RGB", work_img.size, (0, 0, 0))
+                enhance_anatomy = {}
+            if self.detail_adapter_loaded:
+                self.inpaint.set_adapters(
+                    ["detail_xl"], adapter_weights=[lora_scale]
+                )
+            control_scale = (
+                0.65 if enhance_anatomy.get("pose_ok") else 0.0
+            )
+            full_mask = Image.new("L", work_img.size, 255)
+            print(
+                "Enhance request:",
+                f"strength={enhance_strength} steps={steps} cfg={cfg_scale}",
+                f"pose={enhance_anatomy.get('pose_ok')}",
+                f"control={control_scale}",
+            )
+            generated = self.inpaint(
+                prompt=clean_prompt,
+                negative_prompt=negative_prompt,
+                image=work_img,
+                mask_image=full_mask,
+                control_image=pose_img,
+                controlnet_conditioning_scale=control_scale,
+                control_guidance_start=0.0,
+                control_guidance_end=0.85,
+                strength=enhance_strength,
+                generator=generator,
+                num_inference_steps=steps,
+                guidance_scale=cfg_scale,
+                width=sdxl_w,
+                height=sdxl_h,
+            ).images[0]
+            generated_arr = cv2.cvtColor(
+                np.array(generated), cv2.COLOR_RGB2BGR
+            )
+            generated_arr = cv2.fastNlMeansDenoisingColored(
+                generated_arr, None, 8, 8, 7, 21
+            )
+            generated = Image.fromarray(
+                cv2.cvtColor(generated_arr, cv2.COLOR_BGR2RGB)
+            )
+            generated = ImageEnhance.Contrast(generated).enhance(1.03)
+            generated = ImageEnhance.Color(generated).enhance(1.02)
+            generated = generated.filter(
+                ImageFilter.UnsharpMask(
+                    radius=1.5, percent=100, threshold=2
+                )
+            )
+            buf = io.BytesIO()
+            generated.save(buf, format="PNG")
+            return base64.b64encode(buf.getvalue()).decode("utf-8")
+
+        (
+            active_mask,
+            pose_img,
+            anatomy_info,
+            blend_mask,
+        ) = self._analyze_anatomy_and_mask(
+            work_img,
+            mask_target=mask_target,
+            preserve_limbs=payload.get("preserve_limbs") is not False,
+        )
+        mask_ratio = float(anatomy_info.get("mask_ratio", 0.0))
+        if mask_ratio < 0.008:
+            raise ValueError(
+                "No se detectó una zona de ropa válida para editar."
+            )
+
+        if self.detail_adapter_loaded:
+            self.inpaint.set_adapters(
+                ["detail_xl"], adapter_weights=[lora_scale]
+            )
+
+        control_scale = 0.95 if anatomy_info.get("pose_ok") else 0.0
+        generator = None
+        seed = payload.get("seed")
+        if seed is not None:
+            generator = self._torch.Generator(device="cuda").manual_seed(
+                int(seed)
+            )
+        print(
+            "Inpaint request:",
+            f"mask_target={mask_target}",
+            f"mask={mask_ratio:.3f}",
+            f"pose={anatomy_info.get('pose_ok')}",
+            f"strength=1.0 steps={steps} cfg={cfg_scale}",
+            f"control={control_scale}",
+        )
+
+        generated = self.inpaint(
+            prompt=clean_prompt,
+            negative_prompt=negative_prompt,
+            image=work_img,
+            mask_image=active_mask,
+            control_image=pose_img,
+            controlnet_conditioning_scale=control_scale,
+            control_guidance_start=0.0,
+            control_guidance_end=0.95,
+            strength=1.0,
+            generator=generator,
+            num_inference_steps=steps,
+            guidance_scale=cfg_scale,
+            width=sdxl_w,
+            height=sdxl_h,
+        ).images[0]
+
+        skin_rgb = anatomy_info.get("skin_rgb")
+        if payload.get("skin_pre_adapt", True) and skin_rgb:
+            import numpy as np
+
+            gen_np = np.array(generated).astype(np.float32)
+            active_bool = np.array(active_mask) > 128
+            if np.count_nonzero(active_bool) >= 500:
+                target_rgb = np.array(skin_rgb, dtype=np.float32)
+                gen_rgb = np.median(gen_np[active_bool], axis=0)
+                desired_rgb = gen_rgb * 0.10 + target_rgb * 0.90
+                ratio = np.clip(
+                    desired_rgb / np.maximum(gen_rgb, 1.0), 0.70, 1.32
+                )
+                gen_np[active_bool] = np.clip(
+                    gen_np[active_bool] * ratio, 0.0, 255.0
+                )
+                generated = Image.fromarray(gen_np.astype(np.uint8))
+
+        blend_mode = str(payload.get("blend_mode") or "seamless").lower()
+        seamless_ok = False
+        if blend_mode == "seamless":
+            try:
+                import cv2
+                import numpy as np
+
+                active_np = np.array(active_mask, dtype=np.uint8)
+                ys, xs = np.where(active_np > 0)
+                if len(xs) > 200:
+                    center = (
+                        int(np.clip(xs.mean(), 0, sdxl_w - 1)),
+                        int(np.clip(ys.mean(), 0, sdxl_h - 1)),
+                    )
+                    generated = Image.fromarray(
+                        cv2.cvtColor(
+                            cv2.seamlessClone(
+                                cv2.cvtColor(
+                                    np.array(generated), cv2.COLOR_RGB2BGR
+                                ),
+                                cv2.cvtColor(
+                                    np.array(work_img), cv2.COLOR_RGB2BGR
+                                ),
+                                active_np,
+                                center,
+                                cv2.NORMAL_CLONE,
+                            ),
+                            cv2.COLOR_BGR2RGB,
+                        )
+                    )
+                seamless_ok = True
+            except Exception as e:
+                print(f"seamless blend warn: {e}")
+
+        if blend_mode == "raw":
+            final_work = generated
+        else:
+            final_work = (
+                generated
+                if seamless_ok
+                else Image.composite(generated, work_img, blend_mask)
+            )
+        final_out = final_work.resize((orig_w, orig_h), Image.LANCZOS)
+
+        if payload.get("debug"):
+            import json
+
+            def pil_to_b64(img, fmt="PNG"):
+                out = io.BytesIO()
+                img.save(out, format=fmt)
+                return base64.b64encode(out.getvalue()).decode("utf-8")
+
+            return json.dumps(
+                {
+                    "image": pil_to_b64(final_out),
+                    "mask": pil_to_b64(active_mask),
+                    "blend_mask": pil_to_b64(blend_mask),
+                    "pose": pil_to_b64(pose_img),
+                    "anatomy": anatomy_info,
+                }
+            )
+
+        buf = io.BytesIO()
+        final_out.save(buf, format="PNG")
+        return base64.b64encode(buf.getvalue()).decode("utf-8")
+
+
+# =====================================================================
+# MOTOR 2: WAN 2.1 I2V (MAGESPACE BF16 + ESCALADO 0-255 ANTI-VIDEO NEGRO)
+# =====================================================================
+@app.cls(
+    gpu="A100-80GB",
+    volumes={VOLUME_PATH: vol},
+    scaledown_window=180,
+    timeout=900,
+)
+class VideoEngine:
+    @modal.enter()
+    def setup(self):
+        import urllib.request
+        import torch
+        from diffusers import (
+            AutoencoderKLWan,
+            UniPCMultistepScheduler,
+            WanImageToVideoPipeline,
+        )
+        from huggingface_hub import snapshot_download
+        from transformers import CLIPVisionModelWithProjection
+
+        wan_cache = f"{VOLUME_PATH}/wan21_magespace_bf16"
+        lora_dir = f"{VOLUME_PATH}/wan_loras"
+        os.makedirs(wan_cache, exist_ok=True)
+        os.makedirs(lora_dir, exist_ok=True)
+
+        marker = f"{wan_cache}/.ready"
+        if not os.path.exists(marker):
+            snapshot_download(
+                repo_id=WAN_LIGHTNING_BF16_REPO,
+                local_dir=wan_cache,
+            )
+            with open(marker, "w") as f:
+                f.write("ok")
+            vol.commit()
+
+        self.lora_paths = {}
+        for lora_id, url in CIVITAI_WAN_LORAS.items():
+            lpath = f"{lora_dir}/{lora_id}.safetensors"
+            if not os.path.exists(lpath) or os.path.getsize(lpath) < 10000:
+                try:
+                    urllib.request.urlretrieve(url, lpath)
+                except Exception as e:
+                    print(f"Warn download {lora_id}: {e}")
+            if os.path.exists(lpath) and os.path.getsize(lpath) > 10000:
+                self.lora_paths[lora_id] = lpath
+        vol.commit()
+
+        image_encoder = CLIPVisionModelWithProjection.from_pretrained(
+            wan_cache,
+            subfolder="image_encoder",
+            torch_dtype=torch.float32,
+            local_files_only=True,
+        )
+        vae = AutoencoderKLWan.from_pretrained(
+            wan_cache,
+            subfolder="vae",
+            torch_dtype=torch.float32,
+            local_files_only=True,
+        )
+        self.pipe = WanImageToVideoPipeline.from_pretrained(
+            wan_cache,
+            vae=vae,
+            image_encoder=image_encoder,
+            torch_dtype=torch.bfloat16,
+            local_files_only=True,
+        )
+        self.pipe.scheduler = UniPCMultistepScheduler.from_config(
+            self.pipe.scheduler.config,
+            flow_shift=8.0,
+        )
+        self.pipe.vae.enable_tiling()
+        self.pipe.to("cuda")
+        self.current_loaded_lora = None
+
+    def _select_lora_for_request(self, payload: dict) -> str:
+        lora_id = payload.get("lora_id")
+        if lora_id in self.lora_paths:
+            return lora_id
+        prompt_low = str(payload.get("prompt", "")).lower()
+        if "str1p" in prompt_low or "takes off" in prompt_low:
+            return "str1p"
+        if "revealing her breasts" in prompt_low or "pulling up" in prompt_low:
+            return "tittydrop"
+        if "covers the view" in prompt_low:
+            return "clothes_on_off"
+        if "fondling" in prompt_low or "groping" in prompt_low:
+            return "boob_grab"
+        return "bounce"
+
+    @staticmethod
+    def _to_uint8_rgb(frame):
+        import numpy as np
+        from PIL import Image
+
+        if isinstance(frame, Image.Image):
+            arr = np.array(frame, dtype=np.float32)
+        else:
+            arr = np.array(frame, dtype=np.float32)
+        arr = np.nan_to_num(arr, nan=0.0, posinf=255.0, neginf=0.0)
+        if arr.size == 0:
+            raise ValueError("Frame vacío devuelto por Wan")
+        if float(arr.max()) <= 1.05:
+            arr = arr * 255.0
+        return np.clip(arr, 0.0, 255.0).astype(np.uint8)
+
+    @staticmethod
+    def _continuation_prompt(
+        lora_id: str, chunk_index: int, total_chunks: int
+    ) -> str:
+        sequences = {
+            "str1p": [
+                (
+                    "the woman is now topless, keeps eye contact with the "
+                    "camera, slowly turns her shoulders, shifts her weight "
+                    "and lets her bare breasts move naturally, same body, "
+                    "same background, static camera, no camera movement"
+                ),
+                (
+                    "the topless woman continues posing, raises one hand "
+                    "through her hair, changes posture slightly and gently "
+                    "shakes her breasts, same body, same background, "
+                    "static camera, no camera movement"
+                ),
+                (
+                    "for the final segment the topless woman leans slightly "
+                    "forward, smiles, brings her shoulders together and "
+                    "settles into a confident nude pose, same body, same "
+                    "background, static camera, no camera movement"
+                ),
+            ],
+            "tittydrop": [
+                (
+                    "the woman keeps her top lifted, bare breasts fully "
+                    "visible, gently bounces them and changes her posture, "
+                    "same body, same background, static camera"
+                ),
+                (
+                    "the topless woman adjusts her lifted top with one hand, "
+                    "turns slightly and lets her breasts move naturally, "
+                    "same body, same background, static camera"
+                ),
+                (
+                    "for the final segment the topless woman lowers her "
+                    "hands, smiles at the camera and settles into a natural "
+                    "pose, same body, same background, static camera"
+                ),
+            ],
+            "clothes_on_off": [
+                (
+                    "the woman is now completely nude, slowly turns her "
+                    "shoulders and hips, moves naturally and keeps eye "
+                    "contact, same body, same background, static camera"
+                ),
+                (
+                    "the nude woman takes a small step in place, changes "
+                    "posture, runs one hand through her hair and keeps "
+                    "moving naturally, same body, same background, "
+                    "static camera"
+                ),
+                (
+                    "for the final segment the nude woman faces the camera, "
+                    "smiles, lifts her chest slightly and settles into a "
+                    "confident pose, same body, same background, "
+                    "static camera"
+                ),
+            ],
+            "bounce": [
+                (
+                    "the nude woman changes rhythm, rolls her hips slowly "
+                    "and lets her breasts sway with realistic physics, "
+                    "same body, same background, static camera"
+                ),
+                (
+                    "the nude woman leans forward slightly, shakes her "
+                    "breasts gently, then returns upright while smiling, "
+                    "same body, same background, static camera"
+                ),
+                (
+                    "for the final segment the nude woman slows down, "
+                    "settles into a sensual pose and keeps subtle natural "
+                    "breast motion, same body, same background, "
+                    "static camera"
+                ),
+            ],
+            "boob_grab": [
+                (
+                    "the woman lifts her bare breasts with both hands, "
+                    "changes pressure gently and looks at the camera, "
+                    "same body, same background, static camera"
+                ),
+                (
+                    "the woman slides her fingertips around her breasts, "
+                    "presses them softly together and smiles seductively, "
+                    "same body, same background, static camera"
+                ),
+                (
+                    "for the final segment the woman releases one hand, "
+                    "keeps the other cupping her breast and settles into a "
+                    "confident nude pose, same body, same background, "
+                    "static camera"
+                ),
+            ],
+        }
+        seq = sequences.get(
+            lora_id,
+            [
+                (
+                    "continue the same natural motion with a slightly new "
+                    "pose, preserve the same body, clothing state, face and "
+                    "background, static camera"
+                ),
+                (
+                    "finish the motion naturally, preserve the same body, "
+                    "clothing state, face and background, static camera"
+                ),
+            ],
+        )
+        idx = min(max(chunk_index - 1, 0), len(seq) - 1)
+        return seq[idx]
+
+    @modal.method()
+    def generate_video(self, payload: dict) -> str:
+        import numpy as np
+        import torch
+        from diffusers.utils import export_to_video
+        from PIL import Image
+
+        torch.cuda.empty_cache()
+
+        init_images = payload.get("init_images") or []
+        if not init_images:
+            raise ValueError(
+                "Se requiere una imagen base en el Paso 1 para el video."
+            )
+
+        raw_img = init_images[0]
+        if "," in raw_img:
+            raw_img = raw_img.split(",", 1)[1]
+        orig_img = Image.open(
+            io.BytesIO(base64.b64decode(raw_img))
+        ).convert("RGB")
+
+        if orig_img.width >= orig_img.height:
+            target_w, target_h = 832, 480
+        else:
+            target_w, target_h = 480, 832
+
+        img = orig_img.resize((target_w, target_h), Image.LANCZOS)
+
+        prompt = payload.get("prompt", "")
+        negative_prompt = payload.get(
+            "negative_prompt",
+            (
+                "Bright tones, overexposed, static, blurred details, "
+                "worst quality, low quality, deformed, distorted, watermark, "
+                "camera zoom, camera pan, moving background"
+            ),
+        )
+        chosen_lora = self._select_lora_for_request(payload)
+        lora_scale = max(
+            0.0, min(1.0, float(payload.get("lora_scale") or 0.85))
+        )
+
+        if self.current_loaded_lora != chosen_lora:
+            try:
+                self.pipe.unload_lora_weights()
+            except Exception:
+                pass
+            lpath = self.lora_paths.get(chosen_lora)
+            if lpath and os.path.exists(lpath):
+                try:
+                    self.pipe.load_lora_weights(
+                        lpath, adapter_name=chosen_lora
+                    )
+                    self.pipe.set_adapters(
+                        [chosen_lora], adapter_weights=[lora_scale]
+                    )
+                    self.current_loaded_lora = chosen_lora
+                except Exception as e:
+                    print(f"Civitai LoRA warn: {e}")
+                    self.current_loaded_lora = None
+
+        if self.current_loaded_lora == chosen_lora:
+            try:
+                self.pipe.set_adapters(
+                    [chosen_lora], adapter_weights=[lora_scale]
+                )
+            except Exception as e:
+                print(f"LoRA scale warn: {e}")
+
+        req_seconds = int(payload.get("video_duration_seconds", 5))
+        req_seconds = 20 if req_seconds >= 20 else 10 if req_seconds >= 10 else 5
+        chunks_needed = {5: 1, 10: 2, 20: 4}[req_seconds]
+        video_steps = max(4, min(10, int(payload.get("steps") or 6)))
+        video_cfg = max(
+            1.0, min(4.0, float(payload.get("cfg_scale") or 1.0))
+        )
+        seed = int(payload.get("seed") or 123456)
+        generator = torch.Generator(device="cuda").manual_seed(seed)
+
+        all_frames = []
+        condition_img = img
+        with torch.inference_mode():
+            for chunk_idx in range(chunks_needed):
+                chunk_prompt = (
+                    prompt
+                    if chunk_idx == 0
+                    else self._continuation_prompt(
+                        chosen_lora, chunk_idx, chunks_needed
+                    )
+                )
+                chunk_lora_scale = 0.0
+                if self.current_loaded_lora == chosen_lora:
+                    transition_loras = {"str1p", "tittydrop", "clothes_on_off"}
+                    chunk_lora_scale = (
+                        lora_scale
+                        if chunk_idx == 0
+                        else (
+                            0.35
+                            if chosen_lora in transition_loras
+                            else min(lora_scale, 0.65)
+                        )
+                    )
+                    try:
+                        self.pipe.set_adapters(
+                            [chosen_lora],
+                            adapter_weights=[chunk_lora_scale],
+                        )
+                    except Exception as e:
+                        print(f"LoRA chunk scale warn: {e}")
+                raw_frames = list(
+                    self.pipe(
+                        image=condition_img,
+                        prompt=chunk_prompt,
+                        negative_prompt=negative_prompt,
+                        height=target_h,
+                        width=target_w,
+                        num_frames=81,
+                        guidance_scale=video_cfg,
+                        num_inference_steps=video_steps,
+                        generator=generator,
+                    ).frames[0]
+                )
+                chunk_pil = [
+                    Image.fromarray(self._to_uint8_rgb(frame))
+                    for frame in raw_frames
+                ]
+                if chunk_idx == 0:
+                    all_frames.extend(chunk_pil)
+                else:
+                    all_frames.extend(chunk_pil[1:])
+                condition_img = chunk_pil[-1]
+                print(
+                    "Wan chunk",
+                    chunk_idx + 1,
+                    "frames=",
+                    len(chunk_pil),
+                    "mean=",
+                    float(np.mean(self._to_uint8_rgb(raw_frames[0]))),
+                    "lora=",
+                    chosen_lora,
+                    "lora_scale=",
+                    chunk_lora_scale,
+                )
+                torch.cuda.empty_cache()
+
+        if not all_frames:
+            raise ValueError("Wan 2.1 no devolvió fotogramas válidos")
+
+        first_mean = float(np.mean(self._to_uint8_rgb(all_frames[0])))
+        last_mean = float(np.mean(self._to_uint8_rgb(all_frames[-1])))
+        if first_mean < 4.0 or last_mean < 4.0:
+            raise ValueError(
+                f"Wan generó fotogramas casi negros ({first_mean:.2f}, "
+                f"{last_mean:.2f})"
+            )
+
+        target_total = req_seconds * 16
+        out_frames = all_frames[:target_total]
+
+        with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tmp:
+            tmp_path = tmp.name
+
+        export_to_video(out_frames, tmp_path, fps=16)
+        with open(tmp_path, "rb") as f:
+            video_b64 = base64.b64encode(f.read()).decode("utf-8")
+        os.remove(tmp_path)
+        torch.cuda.empty_cache()
+        return video_b64
+
+
+# =====================================================================
+# ENRUTADOR WEB CON COLA ASÍNCRONA (CERO ERRORES "LOAD FAILED")
+# =====================================================================
+@app.function(timeout=600)
+@modal.asgi_app()
+def api():
+    from fastapi import FastAPI, HTTPException, Request
+    from fastapi.middleware.cors import CORSMiddleware
+
+    web = FastAPI(
+        title="Estudio IA - SDXL Inpainting + OpenPose + Wan 2.1 Async Queue"
+    )
+    web.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    @web.get("/sdapi/v1/sd-models")
+    async def list_models():
+        return [
+            {
+                "title": (
+                    "Lustify Inpainting 9ch + OpenPose SDXL + Wan 2.1 Video"
+                ),
+                "model_name": "LustifyInpaint_OpenPose_Wan21",
+            }
+        ]
+
+    @web.post("/sdapi/v1/job/submit")
+    async def submit_async_job(req: Request):
+        try:
+            payload = await req.json()
+            is_vid = bool(
+                payload.get("is_video") or payload.get("video_frames")
+            )
+            if is_vid:
+                call = await VideoEngine().generate_video.spawn.aio(payload)
+                media_type = "video"
+            else:
+                call = await ImageEngine().generate.spawn.aio(payload)
+                media_type = "image"
+            return {
+                "call_id": call.object_id,
+                "media_type": media_type,
+                "status": "processing",
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @web.get("/sdapi/v1/job/status/{call_id}")
+    async def get_async_job_status(call_id: str, media_type: str = "image"):
+        fc = modal.FunctionCall.from_id(call_id)
+        try:
+            result_b64 = await fc.get.aio(timeout=0)
+        except TimeoutError:
+            return {"status": "processing"}
+        except Exception as e:
+            return {"status": "failed", "error": str(e)}
+
+        if media_type == "video":
+            return {
+                "status": "completed",
+                "video": result_b64,
+                "media_type": "video/mp4",
+            }
+        return {
+            "status": "completed",
+            "images": [result_b64],
+            "media_type": "image/png",
+        }
+
+    @web.post("/sdapi/v1/txt2img")
+    async def txt2img_endpoint(req: Request):
+        try:
+            payload = await req.json()
+            b64_png = await ImageEngine().generate.remote.aio(payload)
+            return {"images": [b64_png], "media_type": "image/png"}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @web.post("/sdapi/v1/img2img")
+    async def img2img_endpoint(req: Request):
+        try:
+            payload = await req.json()
+            if payload.get("is_video") or payload.get("video_frames"):
+                b64_mp4 = await VideoEngine().generate_video.remote.aio(payload)
+                return {"video": b64_mp4, "media_type": "video/mp4"}
+
+            b64_png = await ImageEngine().generate.remote.aio(payload)
+            return {"images": [b64_png], "media_type": "image/png"}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @web.post("/sdapi/v1/img2vid")
+    async def img2vid_endpoint(req: Request):
+        try:
+            payload = await req.json()
+            b64_mp4 = await VideoEngine().generate_video.remote.aio(payload)
+            return {"video": b64_mp4, "media_type": "video/mp4"}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    return web

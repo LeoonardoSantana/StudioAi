@@ -1,0 +1,45 @@
+/* ==========================================================================
+   AI Media Studio - Estilos Personalizados
+   ========================================================================== */
+
+:root {
+    --scrollbar-track: #0f172a;
+    --scrollbar-thumb: #334155;
+    --scrollbar-thumb-hover: #6366f1;
+}
+
+/* Barra de desplazamiento personalizada */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+}
+
+/* Comparador Antes / Después sin distorsión de tamaño */
+.before-clipper {
+    clip-path: inset(0 50% 0 0);
+    will-change: clip-path;
+}
+
+/* Estado activo al arrastrar una imagen sobre la zona de carga */
+.dropzone-active {
+    border-color: #6366f1 !important;
+    background-color: rgba(99, 102, 241, 0.1) !important;
+}
+
+/* Transiciones suaves para controles interactivos */
+input[type="range"] {
+    accent-color: #6366f1;
+}
