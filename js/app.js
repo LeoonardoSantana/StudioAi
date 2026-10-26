@@ -14,6 +14,7 @@
         selectedQuality: 'balanced',
         videoDurationSeconds: 5,
         base64UploadedImage: null,
+        base64FaceImage: null,
         uploadedImgWidth: 768,
         uploadedImgHeight: 768,
         fixedRefBefore: null,
@@ -25,10 +26,97 @@
         lastGeneratedMediaType: 'image',
         isGenerating: false,
         isCheckingServer: false,
+        isCheckingBilling: false,
+        billingCheckPromise: null,
+        lastBillingStatus: null,
         cloudGuideTab: 'modal',
         lastImageGpuWarmAt: 0,
         lastVideoGpuWarmAt: 0
     };
+
+    const mediaObjectUrls = new Map();
+
+    function getMimeTypeFromDataUrl(dataUrl, fallback = 'image/png') {
+        const match = /^data:([^;,]+)/.exec(String(dataUrl || ''));
+        return match ? match[1] : fallback;
+    }
+
+    function dataUrlToBlob(dataUrl) {
+        const raw = String(dataUrl || '');
+        const commaIndex = raw.indexOf(',');
+        if (!raw.startsWith('data:') || commaIndex < 0) {
+            throw new Error('Formato de archivo inválido');
+        }
+        const header = raw.slice(0, commaIndex);
+        const body = raw.slice(commaIndex + 1);
+        const mime = getMimeTypeFromDataUrl(raw);
+        const bytes = header.includes(';base64')
+            ? atob(body.replace(/\s/g, ''))
+            : decodeURIComponent(body);
+        const arr = new Uint8Array(bytes.length);
+        for (let i = 0; i < bytes.length; i += 1) {
+            arr[i] = bytes.charCodeAt(i);
+        }
+        return new Blob([arr], { type: mime });
+    }
+
+    function getPlayableMediaUrl(dataUrl) {
+        if (!dataUrl || !String(dataUrl).startsWith('data:video/')) {
+            return dataUrl;
+        }
+        if (!mediaObjectUrls.has(dataUrl)) {
+            try {
+                mediaObjectUrls.set(
+                    dataUrl,
+                    URL.createObjectURL(dataUrlToBlob(dataUrl))
+                );
+            } catch (err) {
+                mediaObjectUrls.set(dataUrl, dataUrl);
+            }
+        }
+        return mediaObjectUrls.get(dataUrl);
+    }
+
+    function isIOSLikeDevice() {
+        return (
+            /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+        );
+    }
+
+    async function saveDataUrlAsFile(dataUrl, fileName) {
+        const blob = dataUrlToBlob(dataUrl);
+        let file = null;
+        try {
+            file = new File([blob], fileName, { type: blob.type });
+        } catch (err) {
+            file = null;
+        }
+
+        if (file && isIOSLikeDevice() && navigator.canShare) {
+            const shareData = { files: [file], title: fileName };
+            if (navigator.canShare(shareData)) {
+                try {
+                    await navigator.share(shareData);
+                    return 'shared';
+                } catch (err) {
+                    if (err && err.name === 'AbortError') return 'cancelled';
+                }
+            }
+        }
+
+        const objectUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = objectUrl;
+        a.download = fileName;
+        a.rel = 'noopener';
+        if (isIOSLikeDevice()) a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+        return isIOSLikeDevice() ? 'opened' : 'downloaded';
+    }
 
     async function copyTextToClipboard(text) {
         if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
@@ -76,6 +164,58 @@
             box.classList.add('bg-indigo-950/60', 'border-indigo-800', 'text-indigo-200');
         }
         box.textContent = text;
+    }
+
+    function updateCreditBalanceBadge(status) {
+        const badge = document.getElementById('creditBalanceBadge');
+        if (!badge) return;
+
+        const baseClass =
+            'text-[10px] px-2 py-1 rounded-full border font-bold whitespace-nowrap cursor-pointer transition';
+        const remaining = status && Number(status.remaining_usd);
+        const hasValue = status && status.ok && Number.isFinite(remaining);
+
+        let toneClass =
+            'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700';
+        let text = 'Créditos: --';
+        if (hasValue) {
+            if (remaining < 1) {
+                toneClass =
+                    'bg-rose-950/70 text-rose-300 border-rose-800 hover:bg-rose-900';
+            } else if (remaining < 3) {
+                toneClass =
+                    'bg-amber-950/70 text-amber-300 border-amber-800 hover:bg-amber-900';
+            } else {
+                toneClass =
+                    'bg-emerald-950/60 text-emerald-300 border-emerald-800 hover:bg-emerald-900';
+            }
+            text = `Créditos: $${remaining.toFixed(2)}`;
+        }
+
+        badge.className = `${baseClass} ${toneClass}`;
+        badge.textContent = text;
+        badge.title = hasValue
+            ? 'Créditos restantes aproximados en Modal'
+            : 'No se pudo consultar el saldo de Modal';
+    }
+
+    async function refreshBillingStatus(rawUrl) {
+        if (state.billingCheckPromise) {
+            return state.billingCheckPromise;
+        }
+        state.isCheckingBilling = true;
+        state.billingCheckPromise = (async () => {
+            try {
+                const status = await StudioAI.Api.checkBillingStatus(rawUrl);
+                state.lastBillingStatus = status;
+                updateCreditBalanceBadge(status);
+                return status;
+            } finally {
+                state.isCheckingBilling = false;
+                state.billingCheckPromise = null;
+            }
+        })();
+        return state.billingCheckPromise;
     }
 
     function saveApiUrlSetting(val) {
@@ -240,12 +380,30 @@
 
         try {
             const result = await StudioAI.Api.checkServerStatus(rawUrl);
+            let billingStatus = null;
             if (dot) {
                 dot.className = result.online
                     ? 'w-2 h-2 rounded-full bg-emerald-400'
                     : 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
             }
-            showMessage(result.message, !result.online);
+            if (result.online) {
+                billingStatus = await refreshBillingStatus(rawUrl);
+            } else {
+                updateCreditBalanceBadge(null);
+            }
+
+            let message = result.message;
+            let warning = !result.online;
+            if (result.online) {
+                const remaining = billingStatus && Number(billingStatus.remaining_usd);
+                if (billingStatus && billingStatus.ok && Number.isFinite(remaining)) {
+                    message += ` Créditos aprox. $${remaining.toFixed(2)}.`;
+                } else {
+                    message += ' No pude consultar los créditos restantes.';
+                    warning = true;
+                }
+            }
+            showMessage(message, warning);
         } finally {
             state.isCheckingServer = false;
         }
@@ -259,7 +417,7 @@
     function updateModeVisibility(category) {
         const isVideo = category === 'video';
         const imageOnlyIds = ['imageQualityBox', 'denoiseOption'];
-        const videoOnlyIds = ['videoDurationBox'];
+        const videoOnlyIds = ['videoDurationBox', 'faceReferenceBox'];
 
         imageOnlyIds.forEach((id) => setElementHidden(id, isVideo));
         videoOnlyIds.forEach((id) => setElementHidden(id, !isVideo));
@@ -649,6 +807,58 @@
         processImageFile(files[0]);
     }
 
+    function previewFaceReference(event) {
+        const files = event && event.target && event.target.files;
+        const file = files && files[0];
+        if (!file) return;
+        if (!file.type || !file.type.startsWith('image/')) {
+            showMessage('Selecciona una imagen válida para la referencia facial.', true);
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = async function (e) {
+            const compressed = await StudioAI.Viewer.compressAndResizeImage(
+                e.target.result,
+                1024
+            );
+            state.base64FaceImage = compressed.dataUrl;
+
+            const img = document.getElementById('faceRefPreview');
+            const placeholder = document.getElementById('faceRefPlaceholder');
+            const btnRemove = document.getElementById('btnRemoveFaceRef');
+            if (img) {
+                img.src = compressed.dataUrl;
+                img.classList.remove('hidden');
+            }
+            if (placeholder) placeholder.classList.add('hidden');
+            if (btnRemove) btnRemove.classList.remove('hidden');
+            showMessage(
+                'Referencia facial lista. Si el rostro base está incompleto, Wan intentará usarla.'
+            );
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function clearFaceReference(event) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        state.base64FaceImage = null;
+        const fileInput = document.getElementById('faceInput');
+        const img = document.getElementById('faceRefPreview');
+        const placeholder = document.getElementById('faceRefPlaceholder');
+        const btnRemove = document.getElementById('btnRemoveFaceRef');
+        if (fileInput) fileInput.value = '';
+        if (img) {
+            img.src = '';
+            img.classList.add('hidden');
+        }
+        if (placeholder) placeholder.classList.remove('hidden');
+        if (btnRemove) btnRemove.classList.add('hidden');
+    }
+
     function clearUploadedImage(event) {
         if (event) {
             event.preventDefault();
@@ -719,6 +929,7 @@
             const isVidPreset = item.type === 'video';
             const isVideoStream =
                 typeof item.dataUrl === 'string' && item.dataUrl.startsWith('data:video/');
+            const playableUrl = getPlayableMediaUrl(item.dataUrl);
 
             const mediaWrapper = document.createElement('div');
             mediaWrapper.className =
@@ -727,7 +938,7 @@
 
             if (isVideoStream) {
                 const videoEl = document.createElement('video');
-                videoEl.src = item.dataUrl;
+                videoEl.src = playableUrl;
                 videoEl.className = 'w-full h-full object-cover';
                 videoEl.autoplay = true;
                 videoEl.loop = true;
@@ -736,7 +947,7 @@
                 mediaWrapper.appendChild(videoEl);
             } else {
                 const imgEl = document.createElement('img');
-                imgEl.src = item.dataUrl;
+                imgEl.src = playableUrl;
                 imgEl.className = 'w-full h-full object-cover group-hover:scale-105 transition';
                 imgEl.alt = item.presetName || 'Resultado IA';
                 mediaWrapper.appendChild(imgEl);
@@ -780,8 +991,8 @@
             btnDownload.type = 'button';
             btnDownload.className =
                 'py-1 px-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white text-[10px] font-semibold transition flex items-center justify-center gap-1';
-            btnDownload.textContent = '⬇ Descargar';
-            btnDownload.addEventListener('click', () => downloadFromVault(item.id));
+            btnDownload.textContent = isIOSLikeDevice() ? '⬇ Guardar' : '⬇ Descargar';
+            btnDownload.addEventListener('click', () => downloadFromVault(item));
 
             const btnDelete = document.createElement('button');
             btnDelete.type = 'button';
@@ -808,6 +1019,7 @@
 
         const isVideoStream =
             typeof item.dataUrl === 'string' && item.dataUrl.startsWith('data:video/');
+        const playableUrl = getPlayableMediaUrl(item.dataUrl);
         const resultVideo = document.getElementById('resultVideo');
         const resultImg = document.getElementById('resultImage');
         const btnSendToVid = document.getElementById('btnUseForVideo');
@@ -821,7 +1033,7 @@
             if (btnSendToVid) btnSendToVid.classList.add('hidden');
             setViewerMode('video');
             if (resultVideo) {
-                resultVideo.src = item.dataUrl;
+                resultVideo.src = playableUrl;
                 resultVideo.classList.remove('hidden');
                 resultVideo.play().catch(() => {});
             }
@@ -836,7 +1048,7 @@
         }
         if (btnSendToVid) btnSendToVid.classList.remove('hidden');
         if (resultImg) {
-            resultImg.src = item.dataUrl;
+            resultImg.src = playableUrl;
         }
         setViewerMode('result');
 
@@ -847,18 +1059,23 @@
         );
     }
 
-    async function downloadFromVault(id) {
-        const item = await StudioAI.Storage.getCreationById(id);
-        if (!item) return;
+    async function downloadFromVault(item) {
+        if (!item || !item.dataUrl) return;
 
         const ext = StudioAI.Storage.getFileExtensionFromDataUrl(item.dataUrl, item.type);
         const cleanName = StudioAI.Storage.sanitizeFileName(item.presetName);
-        const a = document.createElement('a');
-        a.href = item.dataUrl;
-        a.download = `Resultado_${cleanName}_${item.id}.${ext}`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        const fileName = `Resultado_${cleanName}_${item.id}.${ext}`;
+
+        try {
+            const result = await saveDataUrlAsFile(item.dataUrl, fileName);
+            if (result === 'shared') {
+                showMessage('Se abrió Compartir; elige “Guardar en Archivos” o “Guardar video/foto”.');
+            } else if (result === 'opened') {
+                showMessage('Se abrió una vista previa; mantén presionado el archivo para guardarlo.');
+            }
+        } catch (err) {
+            showMessage('No se pudo exportar el archivo en este navegador.', true);
+        }
     }
 
     async function deleteFromVault(id) {
@@ -959,6 +1176,23 @@
         if (isVideoMode && !state.base64UploadedImage) {
             showMessage(
                 'Wan 2.1 I2V necesita una imagen base en el Paso 1 para animarla (o primero genera una foto y pulsa "Pasar Resultado a Video").',
+                true
+            );
+            return;
+        }
+
+        const billingStatus = await refreshBillingStatus(rawUrl);
+        if (billingStatus.ok && billingStatus.can_generate === false) {
+            const remaining = Number(billingStatus.remaining_usd);
+            const amount = Number.isFinite(remaining)
+                ? ` ($${remaining.toFixed(2)} restantes aprox.)`
+                : '';
+            showMessage(`Ya no tienes créditos suficientes en Modal${amount}.`, true);
+            return;
+        }
+        if (!billingStatus.ok || billingStatus.can_generate !== true) {
+            showMessage(
+                'No pude verificar tu saldo de Modal; por seguridad no envié la generación.',
                 true
             );
             return;
@@ -1106,6 +1340,7 @@
                 skinPreAdapt: state.currentPreset ? state.currentPreset.skinPreAdapt : true,
                 quality: state.selectedQuality,
                 base64Image: state.base64UploadedImage,
+                faceImage: isVideoMode ? state.base64FaceImage : null,
                 imgWidth: state.uploadedImgWidth,
                 imgHeight: state.uploadedImgHeight,
                 isVideo: isVideoMode,
@@ -1161,19 +1396,20 @@
                 state.lastGeneratedResultUrl = response.dataUrl;
                 state.lastGeneratedMediaType =
                     response.mediaType || (isVideoMode ? 'video' : 'image');
+                const playableResultUrl = getPlayableMediaUrl(response.dataUrl);
 
                 if (state.lastGeneratedMediaType === 'video') {
                     if (btnSendToVid) btnSendToVid.classList.add('hidden');
                     setViewerMode('video');
                     if (resultVideo) {
-                        resultVideo.src = response.dataUrl;
+                        resultVideo.src = playableResultUrl;
                         resultVideo.classList.remove('hidden');
                         resultVideo.play().catch(() => {});
                     }
                 } else {
                     if (btnSendToVid) btnSendToVid.classList.remove('hidden');
                     if (resultImg) {
-                        resultImg.src = response.dataUrl;
+                        resultImg.src = playableResultUrl;
                     }
                     setViewerMode('result');
                 }
@@ -1205,6 +1441,7 @@
                 );
             }
         } finally {
+            refreshBillingStatus(rawUrl).catch(() => {});
             clearInterval(timerInterval);
             state.isGenerating = false;
             if (generateBtn) generateBtn.disabled = false;
@@ -1267,6 +1504,17 @@
         await loadSavedSettings();
         await loadHistoryGallery();
         setMainCategory('image');
+
+        const apiInput = document.getElementById('apiUrl');
+        const rawUrl = apiInput ? apiInput.value : '';
+        if (rawUrl) {
+            refreshBillingStatus(rawUrl).catch(() => {});
+            setInterval(() => {
+                const currentInput = document.getElementById('apiUrl');
+                const currentUrl = currentInput ? currentInput.value : rawUrl;
+                refreshBillingStatus(currentUrl).catch(() => {});
+            }, 60000);
+        }
     }
 
     Object.assign(global, {
@@ -1276,7 +1524,9 @@
         switchCloudTab,
         setMainCategory,
         previewUpload,
+        previewFaceReference,
         clearUploadedImage,
+        clearFaceReference,
         uploadFixedReference,
         setQuality,
         setVideoDuration,

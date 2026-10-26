@@ -77,6 +77,13 @@ CIVITAI_WAN_LORAS = {
 VOLUME_PATH = "/models"
 vol = modal.Volume.from_name("estudio-ia-models-vol", create_if_missing=True)
 
+MODAL_CREDIT_BUDGET_USD = float(
+    os.environ.get("MODAL_CREDIT_BUDGET_USD", "30.00")
+)
+MIN_GENERATION_CREDIT_USD = float(
+    os.environ.get("MODAL_MIN_GENERATION_CREDIT_USD", "1.00")
+)
+
 
 def download_base_sdxl():
     """Paso 1 de caché."""
@@ -194,7 +201,7 @@ def get_sdxl_native_dimensions(w: int, h: int) -> tuple[int, int]:
 # =====================================================================
 @app.cls(
     gpu="A100-80GB",
-    scaledown_window=180,
+    scaledown_window=60,
     timeout=300,
 )
 class ImageEngine:
@@ -1665,7 +1672,7 @@ class ImageEngine:
 @app.cls(
     gpu="A100-80GB",
     volumes={VOLUME_PATH: vol},
-    scaledown_window=180,
+    scaledown_window=60,
     timeout=900,
 )
 class VideoEngine:
@@ -1734,6 +1741,13 @@ class VideoEngine:
         self.pipe.vae.enable_tiling()
         self.pipe.to("cuda")
         self.current_loaded_lora = None
+        try:
+            from ultralytics import YOLO
+
+            self.pose_model = YOLO("/root/models/yolov8n-pose.pt")
+        except Exception as e:
+            print(f"Video pose model warn: {e}")
+            self.pose_model = None
 
     def _select_lora_for_request(self, payload: dict) -> str:
         lora_id = payload.get("lora_id")
@@ -1765,6 +1779,401 @@ class VideoEngine:
         if float(arr.max()) <= 1.05:
             arr = arr * 255.0
         return np.clip(arr, 0.0, 255.0).astype(np.uint8)
+
+    @staticmethod
+    def _decode_payload_image(raw_img):
+        from PIL import Image
+
+        if "," in raw_img:
+            raw_img = raw_img.split(",", 1)[1]
+        return Image.open(
+            io.BytesIO(base64.b64decode(raw_img))
+        ).convert("RGB")
+
+    @staticmethod
+    def _ellipse_mask(size, feather=16):
+        from PIL import Image, ImageDraw, ImageFilter
+
+        w, h = size
+        mask = Image.new("L", (w, h), 0)
+        draw = ImageDraw.Draw(mask)
+        draw.ellipse(
+            [
+                int(w * 0.04),
+                int(h * 0.02),
+                int(w * 0.96),
+                int(h * 0.98),
+            ],
+            fill=255,
+        )
+        return mask.filter(ImageFilter.GaussianBlur(feather))
+
+    def _detect_face_state(self, pil_img):
+        import cv2
+        import numpy as np
+
+        w, h = pil_img.size
+        face_pts = []
+        shoulder_pts = []
+        face_box = None
+        has_person = False
+
+        if self.pose_model is not None:
+            try:
+                pose_res = self.pose_model.predict(
+                    np.array(pil_img), verbose=False
+                )
+                if (
+                    pose_res
+                    and pose_res[0].keypoints is not None
+                    and len(pose_res[0].keypoints.xy) > 0
+                ):
+                    people_kpts = pose_res[0].keypoints.xy.cpu().numpy()
+                    raw_conf = getattr(
+                        pose_res[0].keypoints, "conf", None
+                    )
+                    people_conf = (
+                        raw_conf.cpu().numpy()
+                        if raw_conf is not None
+                        else None
+                    )
+                    person_idx = 0
+                    raw_boxes = getattr(pose_res[0], "boxes", None)
+                    if raw_boxes is not None and raw_boxes.xyxy is not None:
+                        boxes = raw_boxes.xyxy.cpu().numpy()
+                        if len(boxes) > 0:
+                            areas = (
+                                (boxes[:, 2] - boxes[:, 0])
+                                * (boxes[:, 3] - boxes[:, 1])
+                            )
+                            person_idx = int(np.argmax(areas))
+                            has_person = True
+                    if len(people_kpts) > 0:
+                        has_person = True
+                    if person_idx < len(people_kpts):
+                        kpts = people_kpts[person_idx]
+                        conf = (
+                            people_conf[person_idx]
+                            if people_conf is not None
+                            and person_idx < len(people_conf)
+                            else None
+                        )
+
+                        def kp_ok(idx):
+                            if kpts[idx][0] <= 1 or kpts[idx][1] <= 1:
+                                return False
+                            return (
+                                conf is None
+                                or float(conf[idx]) >= 0.25
+                            )
+
+                        face_pts = [
+                            kpts[i] for i in range(5) if kp_ok(i)
+                        ]
+                        shoulder_pts = [
+                            kpts[i] for i in (5, 6) if kp_ok(i)
+                        ]
+            except Exception as e:
+                print(f"Video face pose warn: {e}")
+
+        if face_pts:
+            xs = [float(p[0]) for p in face_pts]
+            ys = [float(p[1]) for p in face_pts]
+            min_x, max_x = min(xs), max(xs)
+            min_y, max_y = min(ys), max(ys)
+            face_h = max(28.0, max_y - min_y)
+            x1 = min_x - face_h * 0.80
+            x2 = max_x + face_h * 0.80
+            y1 = min_y - face_h * 1.45
+            y2 = max_y + face_h * 0.85
+            if len(shoulder_pts) == 2:
+                sh_dist = max(
+                    48.0,
+                    abs(
+                        float(shoulder_pts[0][0])
+                        - float(shoulder_pts[1][0])
+                    ),
+                )
+                shoulder_y = (
+                    float(shoulder_pts[0][1])
+                    + float(shoulder_pts[1][1])
+                ) * 0.5
+                face_w = max(face_h * 1.65, sh_dist * 0.58)
+                cx = (min_x + max_x) * 0.5
+                x1 = min(x1, cx - face_w * 0.5)
+                x2 = max(x2, cx + face_w * 0.5)
+                y1 = min(y1, shoulder_y - sh_dist * 0.92)
+                y2 = max(y2, shoulder_y + sh_dist * 0.08)
+            face_box = (
+                int(max(0, x1)),
+                int(max(0, y1)),
+                int(min(w, x2)),
+                int(min(h, y2)),
+            )
+        elif len(shoulder_pts) == 2:
+            sh_dist = max(
+                48.0,
+                abs(
+                    float(shoulder_pts[0][0])
+                    - float(shoulder_pts[1][0])
+                ),
+            )
+            cx = (
+                float(shoulder_pts[0][0]) + float(shoulder_pts[1][0])
+            ) * 0.5
+            shoulder_y = (
+                float(shoulder_pts[0][1]) + float(shoulder_pts[1][1])
+            ) * 0.5
+            face_w = sh_dist * 0.58
+            face_h = sh_dist * 0.74
+            face_box = (
+                int(max(0, cx - face_w * 0.5)),
+                int(max(0, shoulder_y - face_h)),
+                int(min(w, cx + face_w * 0.5)),
+                int(min(h, shoulder_y + sh_dist * 0.08)),
+            )
+
+        if not face_pts:
+            try:
+                gray = cv2.cvtColor(
+                    np.array(pil_img), cv2.COLOR_RGB2GRAY
+                )
+                cascade = cv2.CascadeClassifier(
+                    cv2.data.haarcascades
+                    + "haarcascade_frontalface_default.xml"
+                )
+                faces = cascade.detectMultiScale(
+                    gray,
+                    scaleFactor=1.08,
+                    minNeighbors=5,
+                    minSize=(28, 28),
+                )
+                if len(faces) > 0:
+                    x, y, fw, fh = max(
+                        faces, key=lambda b: int(b[2] * b[3])
+                    )
+                    face_box = (
+                        int(x - fw * 0.10),
+                        int(y - fh * 0.10),
+                        int(x + fw * 1.10),
+                        int(y + fh * 1.10),
+                    )
+                    face_box = (
+                        max(0, face_box[0]),
+                        max(0, face_box[1]),
+                        min(w, face_box[2]),
+                        min(h, face_box[3]),
+                    )
+                    roi = gray[
+                        face_box[1] : face_box[3],
+                        face_box[0] : face_box[2],
+                    ]
+                    eye_cascade = cv2.CascadeClassifier(
+                        cv2.data.haarcascades + "haarcascade_eye.xml"
+                    )
+                    eyes = eye_cascade.detectMultiScale(
+                        roi,
+                        scaleFactor=1.10,
+                        minNeighbors=4,
+                        minSize=(8, 8),
+                    )
+                    touches_border = (
+                        face_box[0] <= 6
+                        or face_box[1] <= 6
+                        or face_box[2] >= w - 6
+                        or face_box[3] >= h - 6
+                    )
+                    status = (
+                        "complete"
+                        if len(eyes) >= 2 and not touches_border
+                        else "partial"
+                    )
+                    return {
+                        "status": status,
+                        "face_box": face_box,
+                        "face_points": 0,
+                        "has_person": has_person,
+                    }
+            except Exception as e:
+                print(f"Video haar face warn: {e}")
+
+        touches_border = False
+        if face_box:
+            touches_border = (
+                face_box[0] <= 6
+                or face_box[1] <= 6
+                or face_box[2] >= w - 6
+                or face_box[3] >= h - 6
+            )
+        complete = (
+            len(face_pts) >= 4
+            and not touches_border
+            and face_box is not None
+        )
+        status = "complete" if complete else (
+            "partial" if face_pts else "absent"
+        )
+        return {
+            "status": status,
+            "face_box": face_box,
+            "face_points": len(face_pts),
+            "has_person": has_person,
+        }
+
+    def _patch_reference_face(self, base_img, ref_img, face_box):
+        import numpy as np
+        from PIL import Image, ImageFilter
+
+        if not face_box:
+            return base_img, False
+        ref_state = self._detect_face_state(ref_img)
+        ref_box = ref_state.get("face_box")
+        if not ref_box or ref_state.get("status") == "absent":
+            return base_img, False
+
+        rw, rh = ref_img.size
+        pad_x = int((ref_box[2] - ref_box[0]) * 0.18)
+        pad_y = int((ref_box[3] - ref_box[1]) * 0.14)
+        ref_crop = ref_img.crop(
+            (
+                max(0, ref_box[0] - pad_x),
+                max(0, ref_box[1] - pad_y),
+                min(rw, ref_box[2] + pad_x),
+                min(rh, ref_box[3] + pad_y),
+            )
+        )
+        x1, y1, x2, y2 = face_box
+        box_w, box_h = max(16, x2 - x1), max(16, y2 - y1)
+        patch = ref_crop.resize((box_w, box_h), Image.LANCZOS)
+
+        base_region = np.array(
+            base_img.crop((x1, y1, x2, y2))
+        ).astype(np.float32)
+        patch_np = np.array(patch).astype(np.float32)
+        base_med = np.median(base_region.reshape(-1, 3), axis=0)
+        ref_med = np.maximum(
+            np.median(patch_np.reshape(-1, 3), axis=0), 1.0
+        )
+        ratio = np.clip(base_med / ref_med, 0.72, 1.32)
+        patch_np = np.clip(patch_np * ratio, 0, 255)
+        patch = Image.fromarray(patch_np.astype(np.uint8))
+
+        out = base_img.copy()
+        mask = self._ellipse_mask(patch.size, feather=10)
+        out.paste(patch, (x1, y1), mask)
+        return out, True
+
+    @staticmethod
+    def _sanitize_body_only_prompt(prompt: str) -> str:
+        import re
+
+        replacements = [
+            (
+                r"alluring smile looking at (the )?viewer",
+                "keeping the same visible face region and head position",
+            ),
+            (
+                r"with a natural smile and gentle movement",
+                "with gentle movement while keeping the same face visibility and head position",
+            ),
+            (
+                r"smiles? at (the )?(camera|viewer)",
+                "keeps the same visible face region and head position",
+            ),
+            (
+                r"looks? at (the )?(camera|viewer)",
+                "keeps the same visible face region and head position",
+            ),
+            (
+                r"looking at (the )?(camera|viewer)",
+                "keeping the same visible face region and head position",
+            ),
+            (
+                r"seductive expression",
+                "natural body motion",
+            ),
+            (
+                r"natural smile",
+                "gentle body motion",
+            ),
+            (
+                r"smiles?",
+                "keeps the same visible face region and head position",
+            ),
+            (
+                r"eye contact( with the camera)?",
+                "same visible face region and head position",
+            ),
+            (
+                r"faces? the camera",
+                "keeps the same visible face region and head position",
+            ),
+        ]
+        out = str(prompt or "")
+        for pattern, replacement in replacements:
+            out = re.sub(
+                pattern,
+                replacement,
+                out,
+                flags=re.IGNORECASE,
+            )
+        return out
+
+    @staticmethod
+    def _sanitize_face_reference_prompt(prompt: str) -> str:
+        import re
+
+        replacements = [
+            (
+                r"alluring smile looking at (the )?viewer",
+                "keeping the same reference face",
+            ),
+            (
+                r"with a natural smile and gentle movement",
+                "with gentle movement while keeping the same reference face",
+            ),
+            (
+                r"smiles? at (the )?(camera|viewer)",
+                "keeps the same reference face",
+            ),
+            (
+                r"looks? at (the )?(camera|viewer)",
+                "keeps the same reference face",
+            ),
+            (
+                r"looking at (the )?(camera|viewer)",
+                "keeping the same reference face",
+            ),
+            (
+                r"seductive expression",
+                "same neutral expression",
+            ),
+            (
+                r"natural smile",
+                "same natural expression",
+            ),
+            (
+                r"smiles?",
+                "keeps the same reference face",
+            ),
+            (
+                r"eye contact( with the camera)?",
+                "the same reference face",
+            ),
+            (
+                r"faces? the camera",
+                "keeps the same reference face",
+            ),
+        ]
+        out = str(prompt or "")
+        for pattern, replacement in replacements:
+            out = re.sub(
+                pattern,
+                replacement,
+                out,
+                flags=re.IGNORECASE,
+            )
+        return out
 
     @staticmethod
     def _continuation_prompt(
@@ -1881,6 +2290,119 @@ class VideoEngine:
         idx = min(max(chunk_index - 1, 0), len(seq) - 1)
         return seq[idx]
 
+    @staticmethod
+    def _body_only_continuation_prompt(
+        lora_id: str, chunk_index: int
+    ) -> str:
+        sequences = {
+            "str1p": [
+                (
+                    "the woman keeps her head visibility unchanged from the initial frame, "
+                    "turns her shoulders slowly, shifts her weight and "
+                    "lets her bare breasts move naturally, same initial framing"
+                ),
+                (
+                    "the topless woman changes posture, moves one arm "
+                    "across her torso and gently shakes her breasts while "
+                    "the face remains at the same visibility and head position"
+                ),
+                (
+                    "for the final segment the woman leans her torso "
+                    "slightly forward, brings her shoulders together and "
+                    "settles into a natural nude body pose, same initial framing"
+                ),
+            ],
+            "tittydrop": [
+                (
+                    "the woman keeps her top lifted and her face at the "
+                    "same visibility and head position, gently bounces her breasts and changes "
+                    "her body posture, same initial framing"
+                ),
+                (
+                    "the topless woman adjusts her lifted top with one "
+                    "hand, turns her torso slightly and lets her breasts "
+                    "move naturally, face remains at the same visibility and head position"
+                ),
+                (
+                    "for the final segment the woman lowers her hands, "
+                    "keeps her head visibility unchanged and settles into a natural "
+                    "topless body pose, same initial framing"
+                ),
+            ],
+            "clothes_on_off": [
+                (
+                    "the nude woman keeps her face visibility and head position unchanged, "
+                    "slowly turns her shoulders and hips and moves her "
+                    "body naturally, same initial framing"
+                ),
+                (
+                    "the nude woman takes a small step in place, changes "
+                    "posture and moves one arm naturally while the face "
+                    "remains at the same visibility and head position"
+                ),
+                (
+                    "for the final segment the nude woman keeps her head "
+                    "visibility unchanged, lifts her chest slightly and settles "
+                    "into a natural body pose, same initial framing"
+                ),
+            ],
+            "bounce": [
+                (
+                    "the nude woman keeps her face visibility and head position unchanged, "
+                    "rolls her hips slowly and lets her breasts sway with "
+                    "realistic physics, same initial framing"
+                ),
+                (
+                    "the nude woman leans her torso forward, shakes her "
+                    "breasts gently and returns upright while the face "
+                    "remains at the same visibility and head position"
+                ),
+                (
+                    "for the final segment the nude woman slows down, "
+                    "settles into a natural pose and keeps subtle breast "
+                    "motion, same initial framing"
+                ),
+            ],
+            "boob_grab": [
+                (
+                    "the woman lifts her bare breasts with both hands and "
+                    "keeps her face visibility and head position unchanged, same body and "
+                    "background, same initial framing"
+                ),
+                (
+                    "the woman slides her fingertips around her breasts, "
+                    "presses them softly together and keeps her head "
+                    "visibility unchanged from the initial frame"
+                ),
+                (
+                    "for the final segment the woman releases one hand, "
+                    "keeps the other cupping her breast and settles into "
+                    "a natural body pose, same initial framing"
+                ),
+            ],
+        }
+        seq = sequences.get(
+            lora_id,
+            [
+                (
+                    "the subject keeps the face visibility and head position unchanged and "
+                    "continues the same natural body motion, shoulders, "
+                    "torso, arms and hips move naturally, same initial framing"
+                ),
+                (
+                    "the subject changes posture, shifts weight and keeps "
+                    "the face visibility and head position unchanged while the body motion "
+                    "continues naturally"
+                ),
+                (
+                    "for the final segment the subject settles into a "
+                    "natural body pose with the face remaining at the "
+                    "same visibility and head position, same initial framing"
+                ),
+            ],
+        )
+        return seq[min(max(chunk_index - 1, 0), len(seq) - 1)]
+
     @modal.method()
     def generate_video(self, payload: dict) -> str:
         import numpy as np
@@ -1896,12 +2418,7 @@ class VideoEngine:
                 "Se requiere una imagen base en el Paso 1 para el video."
             )
 
-        raw_img = init_images[0]
-        if "," in raw_img:
-            raw_img = raw_img.split(",", 1)[1]
-        orig_img = Image.open(
-            io.BytesIO(base64.b64decode(raw_img))
-        ).convert("RGB")
+        orig_img = self._decode_payload_image(init_images[0])
 
         if orig_img.width >= orig_img.height:
             target_w, target_h = 832, 480
@@ -1919,6 +2436,69 @@ class VideoEngine:
                 "camera zoom, camera pan, moving background"
             ),
         )
+
+        face_ref_img = None
+        face_ref_raw = (
+            payload.get("face_image")
+            or payload.get("face_reference")
+            or payload.get("face_ref")
+        )
+        if not face_ref_raw and len(init_images) > 1:
+            face_ref_raw = init_images[1]
+        if face_ref_raw:
+            try:
+                face_ref_img = self._decode_payload_image(face_ref_raw)
+            except Exception as e:
+                print(f"Face reference decode warn: {e}")
+
+        force_body_only = bool(
+            payload.get("body_only") or payload.get("bodyOnly")
+        )
+        face_state = self._detect_face_state(img)
+        face_status = face_state.get("status", "absent")
+        face_box = face_state.get("face_box")
+        face_mode = "complete"
+        if force_body_only or face_status != "complete":
+            patched = False
+            can_patch_face = (
+                face_ref_img is not None
+                and face_box
+                and face_state.get("has_person")
+            )
+            if can_patch_face:
+                img, patched = self._patch_reference_face(
+                    img, face_ref_img, face_box
+                )
+            if patched:
+                face_mode = "face_reference"
+                prompt = self._sanitize_face_reference_prompt(prompt)
+                prompt = (
+                    prompt
+                    + ", preserve the reference face identity, same facial "
+                    + "features, no invented face"
+                )
+                negative_prompt += (
+                    ", different face, invented face, face morph, "
+                    "changed facial features"
+                )
+            else:
+                face_mode = "body_only"
+                prompt = self._sanitize_body_only_prompt(prompt)
+                prompt = (
+                    prompt
+                    + ", keep the exact initial camera framing and head "
+                    + "position, animate only torso, body, arms and legs, "
+                    + "do not add new facial features or change the visible face region"
+                )
+                negative_prompt += (
+                    ", invented face, new facial identity, changed facial "
+                    "features, face morph, added eyes, added nose, added mouth"
+                )
+        print(
+            "Video face mode:",
+            f"status={face_status} mode={face_mode} box={face_box}",
+        )
+
         chosen_lora = self._select_lora_for_request(payload)
         lora_scale = max(
             0.0, min(1.0, float(payload.get("lora_scale") or 0.85))
@@ -1965,25 +2545,39 @@ class VideoEngine:
         condition_img = img
         with torch.inference_mode():
             for chunk_idx in range(chunks_needed):
-                chunk_prompt = (
-                    prompt
-                    if chunk_idx == 0
-                    else self._continuation_prompt(
-                        chosen_lora, chunk_idx, chunks_needed
-                    )
-                )
+                if chunk_idx == 0:
+                    chunk_prompt = prompt
+                else:
+                    if face_mode == "body_only":
+                        chunk_prompt = self._body_only_continuation_prompt(
+                            chosen_lora, chunk_idx
+                        )
+                    else:
+                        chunk_prompt = self._continuation_prompt(
+                            chosen_lora, chunk_idx, chunks_needed
+                        )
+                        if face_mode == "face_reference":
+                            chunk_prompt = self._sanitize_face_reference_prompt(
+                                chunk_prompt
+                            )
+                            chunk_prompt += (
+                                ", preserve the same reference face identity"
+                            )
                 chunk_lora_scale = 0.0
                 if self.current_loaded_lora == chosen_lora:
                     transition_loras = {"str1p", "tittydrop", "clothes_on_off"}
-                    chunk_lora_scale = (
-                        lora_scale
-                        if chunk_idx == 0
-                        else (
-                            0.35
-                            if chosen_lora in transition_loras
-                            else min(lora_scale, 0.65)
+                    if face_mode == "body_only":
+                        chunk_lora_scale = min(lora_scale, 0.25)
+                    else:
+                        chunk_lora_scale = (
+                            lora_scale
+                            if chunk_idx == 0
+                            else (
+                                0.35
+                                if chosen_lora in transition_loras
+                                else min(lora_scale, 0.65)
+                            )
                         )
-                    )
                     try:
                         self.pipe.set_adapters(
                             [chosen_lora],
@@ -2082,9 +2676,59 @@ def api():
             }
         ]
 
+    async def billing_status():
+        from decimal import Decimal
+
+        try:
+            workspace = modal.Workspace.from_context()
+            summary = workspace.billing.summary()
+            credits_used = Decimal("0")
+            for name, amount in (summary.adjustments or {}).items():
+                if "credit" in str(name).lower():
+                    credits_used += max(Decimal("0"), -amount)
+
+            billed_cost = max(Decimal("0"), summary.billed_cost)
+            used_usd = credits_used + billed_cost
+            budget_usd = Decimal(str(MODAL_CREDIT_BUDGET_USD))
+            min_usd = Decimal(str(MIN_GENERATION_CREDIT_USD))
+            remaining_usd = max(Decimal("0"), budget_usd - used_usd)
+
+            return {
+                "ok": True,
+                "can_generate": remaining_usd >= min_usd,
+                "remaining_usd": float(remaining_usd),
+                "used_usd": float(used_usd),
+                "metered_cost_usd": float(summary.metered_cost),
+                "billed_cost_usd": float(summary.billed_cost),
+                "credit_budget_usd": float(budget_usd),
+                "min_credit_usd": float(min_usd),
+                "summary_start": summary.start.isoformat(),
+                "summary_end": summary.end.isoformat(),
+            }
+        except Exception as e:
+            return {
+                "ok": False,
+                "can_generate": False,
+                "error": str(e),
+                "message": "No se pudo consultar el saldo del workspace.",
+            }
+
+    async def require_generation_credit():
+        status = await billing_status()
+        if status.get("can_generate") is not True:
+            detail = status.get("message") or (
+                "Créditos insuficientes en Modal para iniciar la generación."
+            )
+            raise HTTPException(status_code=402, detail=detail)
+
+    @web.get("/sdapi/v1/billing-status")
+    async def get_billing_status():
+        return await billing_status()
+
     @web.post("/sdapi/v1/job/submit")
     async def submit_async_job(req: Request):
         try:
+            await require_generation_credit()
             payload = await req.json()
             is_vid = bool(
                 payload.get("is_video") or payload.get("video_frames")
@@ -2100,6 +2744,8 @@ def api():
                 "media_type": media_type,
                 "status": "processing",
             }
+        except HTTPException:
+            raise
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
@@ -2128,15 +2774,19 @@ def api():
     @web.post("/sdapi/v1/txt2img")
     async def txt2img_endpoint(req: Request):
         try:
+            await require_generation_credit()
             payload = await req.json()
             b64_png = await ImageEngine().generate.remote.aio(payload)
             return {"images": [b64_png], "media_type": "image/png"}
+        except HTTPException:
+            raise
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
     @web.post("/sdapi/v1/img2img")
     async def img2img_endpoint(req: Request):
         try:
+            await require_generation_credit()
             payload = await req.json()
             if payload.get("is_video") or payload.get("video_frames"):
                 b64_mp4 = await VideoEngine().generate_video.remote.aio(payload)
@@ -2144,15 +2794,20 @@ def api():
 
             b64_png = await ImageEngine().generate.remote.aio(payload)
             return {"images": [b64_png], "media_type": "image/png"}
+        except HTTPException:
+            raise
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
     @web.post("/sdapi/v1/img2vid")
     async def img2vid_endpoint(req: Request):
         try:
+            await require_generation_credit()
             payload = await req.json()
             b64_mp4 = await VideoEngine().generate_video.remote.aio(payload)
             return {"video": b64_mp4, "media_type": "video/mp4"}
+        except HTTPException:
+            raise
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 

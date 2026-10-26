@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Media Studio - Lustify SDXL + Wan 2.1 I2V</title>
+    <title>AI Media Studio</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
@@ -31,7 +31,7 @@
                     <div class="flex items-center gap-2">
                         <h1 class="text-base font-bold tracking-tight text-white">Estudio IA</h1>
                         <span class="hidden md:inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30">
-                            v1.0
+                            v1.1
                         </span>
                     </div>
                 </div>
@@ -49,6 +49,9 @@
                         Probar
                     </button>
                 </div>
+                <span id="creditBalanceBadge" onclick="checkServerStatus()" title="Consultar créditos de Modal" class="text-[10px] px-2 py-1 rounded-full border font-bold whitespace-nowrap cursor-pointer transition bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700">
+                    Créditos: --
+                </span>
                 <button type="button" onclick="toggleKaggleModal()" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 rounded-xl font-semibold transition flex items-center gap-1.5 shadow-sm">
                     <span>⚡ Configurar Modal ($30 Gratis)</span>
                 </button>
@@ -97,6 +100,23 @@
                     </div>
                     <img id="uploadedPreview" class="hidden max-h-36 rounded-lg object-contain" alt="Vista previa" />
                 </label>
+
+                <div id="faceReferenceBox" class="hidden bg-purple-950/20 border border-purple-800/40 rounded-xl p-3">
+                    <div class="flex items-center justify-between gap-2 mb-2">
+                        <div>
+                            <p class="text-[11px] font-bold text-purple-200">Rostro opcional para video</p>
+                            <p class="text-[10px] text-slate-400">Si la cara sale cortada, Wan la usará como referencia; si no, animará solo el cuerpo.</p>
+                        </div>
+                        <button type="button" id="btnRemoveFaceRef" onclick="clearFaceReference(event)" class="hidden text-[10px] bg-rose-950/70 hover:bg-rose-800 text-rose-300 border border-rose-800/60 px-2 py-0.5 rounded font-semibold transition">
+                            ✕ Quitar
+                        </button>
+                    </div>
+                    <label for="faceInput" class="border border-dashed border-purple-800/70 hover:border-purple-500 rounded-lg p-2.5 text-center cursor-pointer transition bg-slate-950/60 flex items-center justify-center min-h-[64px]">
+                        <input type="file" id="faceInput" accept="image/*" class="hidden" onchange="previewFaceReference(event)">
+                        <span id="faceRefPlaceholder" class="text-[11px] text-slate-400">Sube una foto frontal del rostro (opcional)</span>
+                        <img id="faceRefPreview" class="hidden max-h-16 rounded-md object-contain" alt="Referencia facial" />
+                    </label>
+                </div>
             </div>
 
             <!-- PASO 2: Personalizar Instrucción y Calidad -->

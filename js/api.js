@@ -119,6 +119,28 @@
         }
     }
 
+    async function checkBillingStatus(rawUrl) {
+        const apiUrl = normalizeUrl(rawUrl);
+        if (!apiUrl || !/^https?:\/\//i.test(apiUrl)) {
+            return { ok: false, can_generate: false, error: 'URL inválida' };
+        }
+
+        try {
+            const response = await fetchWithTimeout(
+                `${apiUrl}/sdapi/v1/billing-status`,
+                {
+                    method: 'GET',
+                    headers: { 'Bypass-Tunnel-Reminder': 'true' }
+                },
+                15000
+            );
+            const data = await response.json().catch(() => ({}));
+            return { ok: response.ok, ...data };
+        } catch (err) {
+            return { ok: false, can_generate: false, error: String(err) };
+        }
+    }
+
     async function pollJobUntilDone(apiUrl, callId, mediaType, maxWaitMs = 420000) {
         const startTime = Date.now();
         while (Date.now() - startTime < maxWaitMs) {
@@ -173,6 +195,7 @@
             skinPreAdapt,
             quality,
             base64Image,
+            faceImage,
             imgWidth,
             imgHeight,
             isVideo,
@@ -255,6 +278,9 @@
         if (base64Image) {
             payload.init_images = [base64Image];
             payload.denoising_strength = denoiseStrength;
+        }
+        if (isVideo && typeof faceImage === 'string' && faceImage) {
+            payload.face_image = faceImage;
         }
 
         if (isVideo) {
@@ -352,6 +378,7 @@
         normalizeUrl,
         computeTargetDimensions,
         checkServerStatus,
+        checkBillingStatus,
         generateMedia
     };
 })(window);

@@ -100,7 +100,7 @@
             if (dataUrl.startsWith('data:image/webp')) return 'webp';
             if (dataUrl.startsWith('data:image/png')) return 'png';
         }
-        return fallbackType === 'video' ? 'webm' : 'png';
+        return fallbackType === 'video' ? 'mp4' : 'png';
     }
 
     function sanitizeFileName(text) {
