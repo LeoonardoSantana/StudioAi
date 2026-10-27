@@ -197,6 +197,24 @@
                                    class="w-full accent-pink-500 bg-slate-800 h-1.5 rounded-lg cursor-pointer">
                         </div>
 
+                        <!-- Motor de Imagen -->
+                        <div id="engineOption" class="bg-slate-900/70 p-2.5 rounded-lg border border-emerald-800/40">
+                            <div class="flex justify-between text-[11px] font-semibold mb-0.5">
+                                <span class="text-emerald-200">Motor de imagen (experimental)</span>
+                            </div>
+                            <p class="text-[10px] text-slate-400 mb-2 leading-relaxed">
+                                URPM es un checkpoint fotorrealista alternativo para comparar calidad; Lustify sigue siendo el motor por defecto.
+                            </p>
+                            <div class="grid grid-cols-2 gap-1.5">
+                                <button type="button" onclick="setImageEngine('lustify')" id="eng-lustify" class="py-1.5 px-2 rounded-lg border border-emerald-500/60 bg-emerald-950/30 text-[11px] font-bold text-emerald-300 transition">
+                                    Lustify (actual)
+                                </button>
+                                <button type="button" onclick="setImageEngine('urpm')" id="eng-urpm" class="py-1.5 px-2 rounded-lg border border-slate-800 bg-slate-950 text-[11px] font-bold text-slate-400 transition hover:border-slate-600">
+                                    URPM Realista
+                                </button>
+                            </div>
+                        </div>
+
                         <!-- Denoise Strength -->
                         <div id="denoiseOption" class="bg-slate-900/70 p-2.5 rounded-lg border border-slate-800/60">
                             <div class="flex justify-between text-[11px] font-semibold mb-0.5">

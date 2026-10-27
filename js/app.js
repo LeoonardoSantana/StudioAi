@@ -13,6 +13,7 @@
         currentMode: 'img2img',
         selectedQuality: 'balanced',
         videoDurationSeconds: 5,
+        imageEngine: 'lustify',
         base64UploadedImage: null,
         base64FaceImage: null,
         uploadedImgWidth: 768,
@@ -416,7 +417,11 @@
 
     function updateModeVisibility(category) {
         const isVideo = category === 'video';
-        const imageOnlyIds = ['imageQualityBox', 'denoiseOption'];
+        const imageOnlyIds = [
+            'imageQualityBox',
+            'denoiseOption',
+            'engineOption'
+        ];
         const videoOnlyIds = ['videoDurationBox', 'faceReferenceBox'];
 
         imageOnlyIds.forEach((id) => setElementHidden(id, isVideo));
@@ -501,6 +506,21 @@
                 state.base64UploadedImage
             );
         }
+    }
+
+    function setImageEngine(engine) {
+        const key = engine === 'urpm' ? 'urpm' : 'lustify';
+        state.imageEngine = key;
+
+        const inactive =
+            'py-1.5 px-2 rounded-lg border border-slate-800 bg-slate-950 text-[11px] font-bold text-slate-400 transition hover:border-slate-600';
+        const active =
+            'py-1.5 px-2 rounded-lg border border-emerald-500/60 bg-emerald-950/30 text-[11px] font-bold text-emerald-300 transition';
+
+        ['lustify', 'urpm'].forEach((k) => {
+            const btn = document.getElementById(`eng-${k}`);
+            if (btn) btn.className = k === key ? active : inactive;
+        });
     }
 
     function setQuality(quality) {
@@ -1375,7 +1395,8 @@
                     : null,
                 outpaintControlScale: state.currentPreset
                     ? state.currentPreset.outpaintControlScale
-                    : null
+                    : null,
+                imageEngine: state.imageEngine
             });
 
             if (response.ok && response.dataUrl) {
@@ -1529,6 +1550,7 @@
         clearFaceReference,
         uploadFixedReference,
         setQuality,
+        setImageEngine,
         setVideoDuration,
         generateMedia,
         setViewerMode,

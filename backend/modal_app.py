@@ -31,6 +31,9 @@ SDXL_BASE_DIR = "/root/models/lustify_sdxl"
 SDXL_INPAINT_REPO = "andro-flock/LUSTIFY-SDXL-NSFW-checkpoint-v2-0-INPAINTING"
 SDXL_INPAINT_DIR = "/root/models/lustify_inpaint_full"
 
+ALT_SDXL_INPAINT_REPO = "mrcuddle/URPM-Inpaint-SDXL"
+ALT_SDXL_INPAINT_DIR = "/root/models/urpm_inpaint_sdxl"
+
 SDXL_OPENPOSE_CONTROLNET_REPO = "xinsir/controlnet-openpose-sdxl-1.0"
 SDXL_OPENPOSE_CONTROLNET_DIR = "/root/models/openpose_sdxl_controlnet"
 
@@ -112,24 +115,33 @@ def download_inpaint_and_segmenter():
     from huggingface_hub import snapshot_download
     from ultralytics import YOLO
 
+    inpaint_patterns = [
+        "model_index.json",
+        "scheduler/*.json",
+        "text_encoder/*.json",
+        "text_encoder/*.safetensors",
+        "text_encoder_2/*.json",
+        "text_encoder_2/*.safetensors",
+        "tokenizer/*",
+        "tokenizer_2/*",
+        "unet/*.json",
+        "unet/*.safetensors",
+        "vae/*.json",
+        "vae/*.safetensors",
+    ]
+
     os.makedirs(SDXL_INPAINT_DIR, exist_ok=True)
     snapshot_download(
         repo_id=SDXL_INPAINT_REPO,
         local_dir=SDXL_INPAINT_DIR,
-        allow_patterns=[
-            "model_index.json",
-            "scheduler/*.json",
-            "text_encoder/*.json",
-            "text_encoder/*.safetensors",
-            "text_encoder_2/*.json",
-            "text_encoder_2/*.safetensors",
-            "tokenizer/*",
-            "tokenizer_2/*",
-            "unet/*.json",
-            "unet/*.safetensors",
-            "vae/*.json",
-            "vae/*.safetensors",
-        ],
+        allow_patterns=inpaint_patterns,
+    )
+
+    os.makedirs(ALT_SDXL_INPAINT_DIR, exist_ok=True)
+    snapshot_download(
+        repo_id=ALT_SDXL_INPAINT_REPO,
+        local_dir=ALT_SDXL_INPAINT_DIR,
+        allow_patterns=inpaint_patterns,
     )
 
     os.makedirs(SDXL_OPENPOSE_CONTROLNET_DIR, exist_ok=True)
@@ -252,6 +264,9 @@ class ImageEngine:
             use_safetensors=True,
             local_files_only=True,
         )
+        self.controlnet = controlnet
+        self.inpaint_alt = None
+        self.alt_detail_adapter_loaded = False
         self.inpaint = StableDiffusionXLControlNetInpaintPipeline.from_pretrained(
             SDXL_INPAINT_DIR,
             controlnet=controlnet,
@@ -286,6 +301,37 @@ class ImageEngine:
             "scheduler=",
             self.inpaint.scheduler.__class__.__name__,
         )
+
+    def _get_inpaint_pipe(self, engine):
+        if str(engine or "").lower() not in ("urpm", "alt", "realvis"):
+            return self.inpaint
+        if self.inpaint_alt is None:
+            from diffusers import StableDiffusionXLControlNetInpaintPipeline
+
+            self.inpaint_alt = (
+                StableDiffusionXLControlNetInpaintPipeline.from_pretrained(
+                    ALT_SDXL_INPAINT_DIR,
+                    controlnet=self.controlnet,
+                    scheduler=self.inpaint.scheduler.__class__.from_config(
+                        self.inpaint.scheduler.config
+                    ),
+                    torch_dtype=self._torch.float16,
+                    use_safetensors=True,
+                    local_files_only=True,
+                ).to("cuda")
+            )
+            self.inpaint_alt.watermark = None
+            self.inpaint_alt.safety_checker = None
+            if os.path.exists(SDXL_LORA_PATH):
+                try:
+                    self.inpaint_alt.load_lora_weights(
+                        SDXL_LORA_PATH, adapter_name="detail_xl"
+                    )
+                    self.alt_detail_adapter_loaded = True
+                except Exception as e:
+                    print(f"Alt LoRA warn: {e}")
+            print("Alt inpaint engine loaded:", ALT_SDXL_INPAINT_REPO)
+        return self.inpaint_alt
 
     def _get_txt2img(self):
         """Carga txt2img solo cuando el usuario no sube imagen de entrada."""
@@ -1185,6 +1231,15 @@ class ImageEngine:
             0.0, min(1.0, float(payload.get("lora_scale") or 0.0))
         )
         mask_target = payload.get("mask_target", "all_clothes")
+        image_engine = str(
+            payload.get("image_engine") or "lustify"
+        ).lower()
+        inpaint_pipe = self._get_inpaint_pipe(image_engine)
+        detail_ready = (
+            self.alt_detail_adapter_loaded
+            if inpaint_pipe is self.inpaint_alt
+            else self.detail_adapter_loaded
+        )
 
         init_images = payload.get("init_images") or []
 
@@ -1310,8 +1365,8 @@ class ImageEngine:
             except Exception:
                 pose_img = Image.new("RGB", work_img.size, (0, 0, 0))
                 enhance_anatomy = {}
-            if self.detail_adapter_loaded:
-                self.inpaint.set_adapters(
+            if detail_ready:
+                inpaint_pipe.set_adapters(
                     ["detail_xl"], adapter_weights=[lora_scale]
                 )
             control_scale = (
@@ -1324,7 +1379,7 @@ class ImageEngine:
                 f"pose={enhance_anatomy.get('pose_ok')}",
                 f"control={control_scale}",
             )
-            generated = self.inpaint(
+            generated = inpaint_pipe(
                 prompt=clean_prompt,
                 negative_prompt=negative_prompt,
                 image=work_img,
@@ -1378,8 +1433,8 @@ class ImageEngine:
                 "No se detectó una zona de ropa válida para editar."
             )
 
-        if self.detail_adapter_loaded:
-            self.inpaint.set_adapters(
+        if detail_ready:
+            inpaint_pipe.set_adapters(
                 ["detail_xl"], adapter_weights=[lora_scale]
             )
 
@@ -1408,9 +1463,10 @@ class ImageEngine:
             f"pose={anatomy_info.get('pose_ok')}",
             f"strength=1.0 steps={steps} cfg={cfg_scale}",
             f"control={control_scale}",
+            f"engine={image_engine}",
         )
 
-        generated = self.inpaint(
+        generated = inpaint_pipe(
             prompt=clean_prompt,
             negative_prompt=negative_prompt,
             image=work_img,
@@ -1606,7 +1662,7 @@ class ImageEngine:
                 f"scale={frame_scale:.2f} frame={scaled_w}x{scaled_h}",
                 f"steps={outpaint_steps} control={outpaint_control}",
             )
-            outpainted = self.inpaint(
+            outpainted = inpaint_pipe(
                 prompt=outpaint_prompt,
                 negative_prompt=outpaint_negative,
                 image=outpaint_img,

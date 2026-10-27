@@ -210,7 +210,8 @@
             frameScale,
             controlScale,
             outpaintSteps,
-            outpaintControlScale
+            outpaintControlScale,
+            imageEngine
         } = params;
 
         const apiUrl = normalizeUrl(rawUrl);
@@ -286,6 +287,8 @@
         if (isVideo) {
             payload.is_video = true;
             payload.video_duration_seconds = videoDurationSeconds;
+        } else if (typeof imageEngine === 'string' && imageEngine) {
+            payload.image_engine = imageEngine;
         }
 
         try {
