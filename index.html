@@ -31,7 +31,7 @@
                     <div class="flex items-center gap-2">
                         <h1 class="text-base font-bold tracking-tight text-white">Estudio IA</h1>
                         <span class="hidden md:inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30">
-                            v1.2
+                            v1.3
                         </span>
                     </div>
                 </div>
@@ -133,6 +133,95 @@
 
                 <textarea id="prompt" rows="3" placeholder="Elige un preset de la derecha o escribe aquí qué ropa, anatomía, pose o movimiento quieres..."
                           class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition resize-none"></textarea>
+
+                <div class="flex items-center justify-between -mt-1">
+                    <p class="text-[10px] text-slate-500">✏️ Puedes editar el prompt del preset antes de generar.</p>
+                    <button type="button" onclick="resetPresetPrompt()" class="text-[10px] text-indigo-400 hover:text-indigo-300 font-semibold transition">
+                        ↺ Restaurar prompt del preset
+                    </button>
+                </div>
+
+                <!-- Asistente de Prompt para Video (Wan 2.1) -->
+                <div id="promptAssistantBox" class="hidden bg-fuchsia-950/20 border border-fuchsia-800/40 rounded-xl p-3 space-y-2.5">
+                    <div class="flex items-center justify-between">
+                        <label class="text-[11px] font-semibold text-fuchsia-300">🪄 Asistente de Prompt NSFW</label>
+                        <span class="text-[9px] text-fuchsia-500">Elige en español → genera el prompt en inglés</span>
+                    </div>
+
+                    <div id="customLoraRow" class="hidden">
+                        <label class="text-[10px] font-semibold text-slate-400 block mb-1">LoRA a usar (solo preset Personalizado):</label>
+                        <select id="customLoraSelect" onchange="setCustomLora(this.value)"
+                                class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-fuchsia-500">
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-[10px] font-semibold text-slate-400 block mb-1">Acción principal:</label>
+                            <select id="assistAction" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-fuchsia-500">
+                                <option value="The woman poses naturally for the camera, gentle sensual movement">Solo posar / moverse sensual</option>
+                                <option value="The woman slowly lifts her top and takes it off, revealing her bare breasts">Quitarse la parte de arriba</option>
+                                <option value="The woman slowly undresses piece by piece until she is fully nude">Desnudarse por completo</option>
+                                <option value="The woman covers the lens with her hand and appears completely naked when she removes it">Aparecer desnuda (transición)</option>
+                                <option value="The woman is posing, then a sudden outfit change into sexy lingerie">Cambio súbito de outfit</option>
+                                <option value="The woman rips her clothes open exposing her bare body">Rasgarse la ropa</option>
+                                <option value="The woman pulls down her top and pants revealing her nude body">Bajarse la ropa</option>
+                                <option value="The woman touches and squeezes her bare breasts">Tocarse el pecho</option>
+                                <option value="The woman sways her hips side to side with soft body jiggle">Mover las caderas</option>
+                                <option value="The woman bounces gently, her breasts moving with realistic physics">Rebotar / bailar</option>
+                                <option value="The woman pleasures herself with her hand between her legs">Masturbarse</option>
+                                <option value="The woman moans in intense pleasure, her body trembling">Expresión de placer / orgasmo</option>
+                                <option value="The woman leans toward the camera and kisses the lens">Besar la cámara</option>
+                                <option value="The woman turns around and walks away showing her back">Girarse y caminar de espaldas</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-semibold text-slate-400 block mb-1">Enfoque / encuadre:</label>
+                            <select id="assistFocus" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-fuchsia-500">
+                                <option value="medium shot, same framing as the photo">Encuadre igual a la foto</option>
+                                <option value="full body shot">Cuerpo completo</option>
+                                <option value="upper body close-up">Medio cuerpo / pecho</option>
+                                <option value="close-up on her face">Primer plano del rostro</option>
+                                <option value="low angle focusing on her hips">Ángulo bajo / caderas</option>
+                                <option value="view from behind">Vista de espaldas</option>
+                                <option value="POV first person view">POV primera persona</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-semibold text-slate-400 block mb-1">Ritmo:</label>
+                            <select id="assistPace" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-fuchsia-500">
+                                <option value="slow sensual motion">Lento y sensual</option>
+                                <option value="natural gentle movement">Natural / suave</option>
+                                <option value="fast energetic motion">Rápido y enérgico</option>
+                                <option value="steady rhythmic motion">Rítmico constante</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-semibold text-slate-400 block mb-1">Cámara:</label>
+                            <select id="assistCamera" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-fuchsia-500">
+                                <option value="static camera, no zoom, locked tripod shot" selected>Cámara fija (recomendado)</option>
+                                <option value="slow zoom in">Zoom lento hacia ella</option>
+                                <option value="slight camera pan">Paneo suave</option>
+                                <option value="camera slowly circles around her">Órbita alrededor</option>
+                            </select>
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="text-[10px] font-semibold text-slate-400 block mb-1">Expresión / extra:</label>
+                            <select id="assistExtra" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-fuchsia-500">
+                                <option value="seductive smile looking at the viewer">Sonrisa seductora a cámara</option>
+                                <option value="moaning with pleasure">Gimiendo de placer</option>
+                                <option value="eyes locked with the viewer">Contacto visual fijo</option>
+                                <option value="shy playful expression">Expresión tímida / juguetona</option>
+                                <option value="">Sin extra</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button type="button" onclick="applyAssistantPrompt()"
+                            class="w-full py-2 rounded-xl bg-fuchsia-600 hover:bg-fuchsia-500 text-white text-xs font-bold transition">
+                        ✨ Componer prompt con estas opciones
+                    </button>
+                </div>
 
                 <!-- Botones simples de Calidad Costo-Beneficio -->
                 <div id="imageQualityBox">

@@ -318,6 +318,467 @@
         }
     ];
 
+    // =====================================================================
+    // PRESETS EXTRA DE VIDEO (WAN 2.1 I2V) — GENERADOS DESDE LA BIBLIOTECA
+    // DE LORAS DEL BACKEND. Formato compacto: se expanden con los defaults.
+    // =====================================================================
+    const VIDEO_LORA_DEFAULTS = {
+        category: 'video',
+        mode: 'img2vid',
+        negativePrompt: WAN_NEGATIVE_PROMPT,
+        steps: 6,
+        cfg: 1.0,
+        denoise: 1.0,
+        loraScale: 0.85
+    };
+
+    const EXTRA_VIDEO_PRESETS = [
+        {
+            id: 'vid-outfit-change', loraId: 'outfit_change',
+            name: 'Cambio Súbito de Outfit', badge: 'LoRA: Outfit Change',
+            beforeDesc: 'Foto con cualquier ropa',
+            afterDesc: 'Cambia de outfit de golpe a mitad del video (cámara fija)',
+            prompt: 'The woman is posing for the camera in her outfit, then a sudden outfit change into sexy black lace lingerie, she keeps posing and smiling naturally. Static camera, no zoom.',
+            themeColor: '#8b5cf6', motionStyle: 'turn'
+        },
+        {
+            id: 'vid-rip', loraId: 'rip_shura',
+            name: 'Rasgar la Ropa +18', badge: 'LoRA: rip-shura',
+            beforeDesc: 'Foto con top, bodysuit o leggings',
+            afterDesc: 'Se rasga la ropa de forma dramática exponiendo el cuerpo',
+            prompt: 'Medium shot, the woman stands facing the camera, then rips her clothes open with both hands exposing her bare breasts and body. Aggressive dramatic undressing, rip her clothes. Static camera, no zoom.',
+            themeColor: '#ef4444', motionStyle: 'turn'
+        },
+        {
+            id: 'vid-pulldown', loraId: 'pulldown_shura',
+            name: 'Bajarse la Ropa +18', badge: 'LoRA: Pull-down',
+            beforeDesc: 'Foto con top o pantalón',
+            afterDesc: 'Baja su ropa lentamente hasta quedar desnuda',
+            prompt: 'The woman slowly pulls down her top and then her pants, sliding the fabric down her legs revealing her fully nude body. Smooth natural undressing motion. Static camera, no zoom.',
+            themeColor: '#f97316', motionStyle: 'turn'
+        },
+        {
+            id: 'vid-before-after', loraId: 'before_after',
+            name: 'Antes y Después: Desnuda +18', badge: 'LoRA: Before/After',
+            beforeDesc: 'Foto con ropa normal',
+            afterDesc: 'Transición directa de vestida a desnuda en la misma pose',
+            prompt: 'before and after transformation, person wears casual clothes. The woman starts fully clothed, then transforms to completely nude in the exact same pose and background, bare breasts and vulva visible. Static camera, no zoom.',
+            themeColor: '#0ea5e9', motionStyle: 'turn'
+        },
+        {
+            id: 'vid-undress', loraId: 'woman_undressing',
+            name: 'Desnudarse por Completo +18', badge: 'LoRA: Undressing',
+            beforeDesc: 'Foto con ropa',
+            afterDesc: 'Se quita la ropa pieza por pieza hasta quedar desnuda',
+            prompt: 'The woman slowly undresses herself piece by piece until she is fully nude, seductive natural motion, looking at the viewer. Static camera, no zoom.',
+            themeColor: '#ec4899', motionStyle: 'turn'
+        },
+        {
+            id: 'vid-tittydrop-t2v', loraId: 'tittydrop_t2v',
+            name: 'Titty Drop Alternativo +18', badge: 'LoRA: TittyDrop v2',
+            beforeDesc: 'Foto con blusa o sostén',
+            afterDesc: 'Revela el pecho con caída natural (versión alternativa)',
+            prompt: 'The woman lifts her top to reveal her bare breasts letting them drop naturally with realistic bounce. She smiles at the camera. Static camera, no zoom.',
+            themeColor: '#6366f1', motionStyle: 'wind'
+        },
+        {
+            id: 'vid-missionary', loraId: 'missionary_pov',
+            name: 'Misionero POV +18', badge: 'LoRA: Missionary I2V',
+            beforeDesc: 'Foto acostada o reclinada',
+            afterDesc: 'Sexo en misionero desde punto de vista en primera persona',
+            prompt: 'POV missionary sex, the woman lying back looking at the viewer with pleasure, rhythmic thrusting motion, her body rocking gently with each movement, moaning expression. Static camera POV, no zoom.',
+            themeColor: '#dc2626', motionStyle: 'loop'
+        },
+        {
+            id: 'vid-doggypov', loraId: 'doggypov',
+            name: 'Doggy POV +18', badge: 'LoRA: Doggy I2V',
+            beforeDesc: 'Foto de espaldas o en cuatro',
+            afterDesc: 'Sexo doggystyle en primera persona con vaivén rítmico',
+            prompt: 'POV doggystyle sex, view from behind the woman rocking back and forth rhythmically, hips moving with each thrust. Static camera POV, no zoom.',
+            themeColor: '#b45309', motionStyle: 'loop'
+        },
+        {
+            id: 'vid-front-doggy', loraId: 'front_doggy',
+            name: 'Doggy de Frente +18', badge: 'LoRA: Front Doggy',
+            beforeDesc: 'Foto en cuatro de frente',
+            afterDesc: 'Vaivén doggystyle visto de frente con balanceo de pecho',
+            prompt: 'The woman on all fours facing the camera, her breasts swinging back and forth with a rhythmic thrusting motion, pleasure expression. Static camera, no zoom.',
+            themeColor: '#f59e0b', motionStyle: 'loop'
+        },
+        {
+            id: 'vid-orgasm', loraId: 'orgasm_i2v',
+            name: 'Orgasmo Intenso +18', badge: 'LoRA: Orgasm I2V',
+            beforeDesc: 'Foto desnuda o en acto',
+            afterDesc: 'Expresión de orgasmo con temblor corporal',
+            prompt: 'The woman experiences an intense orgasm, her body trembling, back arching, moaning with an expression of pure ecstasy. Static camera, no zoom.',
+            themeColor: '#e11d48', motionStyle: 'breathing'
+        },
+        {
+            id: 'vid-doggy-front-t2v', loraId: 'doggystyle_front_t2v',
+            name: 'Doggy Frontal (v T2V) +18', badge: 'LoRA: Doggy Front T2V',
+            beforeDesc: 'Foto en cuatro',
+            afterDesc: 'Variante doggystyle frontal entrenada en T2V',
+            prompt: 'Doggystyle sex viewed from the front, the woman on all fours rocking rhythmically toward the camera, breasts swaying. Static camera, no zoom.',
+            themeColor: '#a855f7', motionStyle: 'loop'
+        },
+        {
+            id: 'vid-missionary-t2v', loraId: 'missionary_pov_t2v',
+            name: 'Misionero Alternativo +18', badge: 'LoRA: Missionary v2',
+            beforeDesc: 'Foto reclinada',
+            afterDesc: 'Variante de misionero entrenada en T2V',
+            prompt: 'Missionary sex, the woman lying on her back with legs spread, rhythmic motion, eyes locked with the viewer, pleasure expression. Static camera, no zoom.',
+            themeColor: '#be185d', motionStyle: 'loop'
+        },
+        {
+            id: 'vid-orgasm-t2v', loraId: 'orgasm_t2v',
+            name: 'Orgasmo Alternativo +18', badge: 'LoRA: Orgasm v2 T2V',
+            beforeDesc: 'Foto desnuda',
+            afterDesc: 'Variante de orgasmo entrenada en T2V',
+            prompt: 'Intense orgasm, the woman moaning loudly, body shaking with waves of pleasure, eyes rolling. Static camera, no zoom.',
+            themeColor: '#9f1239', motionStyle: 'breathing'
+        },
+        {
+            id: 'vid-cowgirl', loraId: 'cowgirl',
+            name: 'Cowgirl Encima +18', badge: 'LoRA: Cowgirl 480p',
+            beforeDesc: 'Foto de cuerpo completo',
+            afterDesc: 'Monta en posición cowgirl con rebote rítmico',
+            prompt: 'The woman riding in cowgirl position on top, bouncing up and down rhythmically, her breasts moving with each motion, moaning expression. Static camera, no zoom.',
+            themeColor: '#d97706', motionStyle: 'loop'
+        },
+        {
+            id: 'vid-pov-missionary', loraId: 'pov_missionary_i2v',
+            name: 'Misionero POV (kimjob) +18', badge: 'LoRA: POV Missionary',
+            beforeDesc: 'Foto acostada',
+            afterDesc: 'Variante de misionero POV de la colección kimjob',
+            prompt: 'POV missionary position sex, looking down at the woman lying back, deep rhythmic thrusting, her breasts moving with each push, moaning. Static camera POV, no zoom.',
+            themeColor: '#c2410c', motionStyle: 'loop'
+        },
+        {
+            id: 'vid-squirt', loraId: 'squirt_i2v',
+            name: 'Squirting +18', badge: 'LoRA: Squirt I2V',
+            beforeDesc: 'Foto desnuda',
+            afterDesc: 'Eyaculación femenina durante el clímax',
+            prompt: 'The woman masturbating intensely, then squirting during orgasm, body convulsing with pleasure. Static camera, no zoom.',
+            themeColor: '#06b6d4', motionStyle: 'loop'
+        },
+        {
+            id: 'vid-jelly-hips', loraId: 'jelly_hips',
+            name: 'Caderas con Física Suave', badge: 'LoRA: Jelly Hips',
+            beforeDesc: 'Foto de pie o de cuerpo completo',
+            afterDesc: 'Mueve las caderas con rebote suave de piel',
+            prompt: 'The woman standing and swaying her hips side to side with soft body jiggle physics, seductive slow dance, bare skin moving naturally. Static camera, no zoom.',
+            themeColor: '#14b8a6', motionStyle: 'loop'
+        },
+        {
+            id: 'vid-fingering', loraId: 'fingering',
+            name: 'Masturbación con Dedos +18', badge: 'LoRA: Fingering I2V',
+            beforeDesc: 'Foto desnuda o semidesnuda',
+            afterDesc: 'Se toca íntimamente con expresión de placer',
+            prompt: 'The woman pleasuring herself, hand between her legs fingering slowly, moaning with closed eyes, sensual solo motion. Static camera, no zoom.',
+            themeColor: '#f472b6', motionStyle: 'breathing'
+        },
+        {
+            id: 'vid-holdup', loraId: 'holdup',
+            name: 'Posición Alzada +18', badge: 'LoRA: Hold-up 480p',
+            beforeDesc: 'Foto de cuerpo completo',
+            afterDesc: 'Posición de pie alzada con piernas envueltas',
+            prompt: 'The woman held up in a standing carry position, legs wrapped, moving with rhythmic motion. Static camera, no zoom.',
+            themeColor: '#7c3aed', motionStyle: 'loop'
+        },
+        {
+            id: 'vid-anal', loraId: 'anal_insertion',
+            name: 'Inserción Anal +18', badge: 'LoRA: Anal 480p',
+            beforeDesc: 'Foto de espaldas',
+            afterDesc: 'Inserción anal en primer plano',
+            prompt: 'Slow anal insertion, the woman bent over, gradual penetration motion, pleasure and intensity on her face. Static camera, no zoom.',
+            themeColor: '#b91c1c', motionStyle: 'loop'
+        },
+        {
+            id: 'vid-pov-insertion', loraId: 'pov_insertion',
+            name: 'Inserción POV +18', badge: 'LoRA: POV Insertion',
+            beforeDesc: 'Foto en primer plano',
+            afterDesc: 'Penetración lenta en primera persona',
+            prompt: 'POV slow penetration insertion close-up, gradual thrusting motion, wet detail. Static camera POV, no zoom.',
+            themeColor: '#be123c', motionStyle: 'loop'
+        },
+        {
+            id: 'vid-flaccid', loraId: 'flaccid',
+            name: 'Pene Flácido a Erecto +18', badge: 'LoRA: Flaccid 480p',
+            beforeDesc: 'Foto con pareja o modelo',
+            afterDesc: 'Transición de flácido a erecto',
+            prompt: 'A flaccid penis gradually becoming erect, natural transition. Static camera, no zoom.',
+            themeColor: '#94a3b8', motionStyle: 'breathing'
+        },
+        {
+            id: 'vid-cumshot', loraId: 'cumshot',
+            name: 'Cumshot Final +18', badge: 'LoRA: Cumshot I2V',
+            beforeDesc: 'Foto del acto o del rostro',
+            afterDesc: 'Termina en eyaculación visible',
+            prompt: 'Cumshot finish, ejaculation onto the woman, she smiles with pleasure. Static camera, no zoom.',
+            themeColor: '#fde047', motionStyle: 'loop'
+        },
+        {
+            id: 'vid-solo-fem', loraId: 'female_masturbation',
+            name: 'Masturbación Femenina +18', badge: 'LoRA: Solo Female',
+            beforeDesc: 'Foto desnuda o reclinada',
+            afterDesc: 'Se masturba sola hasta el clímax',
+            prompt: 'The woman masturbating alone, fingers circling between her legs, hips moving, eyes half closed with pleasure. Static camera, no zoom.',
+            themeColor: '#f0abfc', motionStyle: 'breathing'
+        },
+        {
+            id: 'vid-kissing', loraId: 'kissing',
+            name: 'Beso Apasionado', badge: 'LoRA: Kissing',
+            beforeDesc: 'Foto con dos personas o pareja',
+            afterDesc: 'Beso francés intenso y apasionado',
+            prompt: 'Passionate deep french kissing, tongues touching, intense intimate kiss, heads moving slightly. Static camera, no zoom.',
+            themeColor: '#fb7185', motionStyle: 'breathing'
+        },
+        {
+            id: 'vid-spanking', loraId: 'spanking',
+            name: 'Nalgadas +18', badge: 'LoRA: Spanking',
+            beforeDesc: 'Foto de espaldas o inclinada',
+            afterDesc: 'Nalgadas con rebote de piel',
+            prompt: 'Spanking motion, hand slapping her bare butt, skin rippling with each spank, she reacts with pleasure. Static camera, no zoom.',
+            themeColor: '#ef4444', motionStyle: 'loop'
+        },
+        {
+            id: 'vid-standing-doggy', loraId: 'standing_doggy',
+            name: 'Doggy de Pie +18', badge: 'LoRA: Standing Doggy',
+            beforeDesc: 'Foto de pie inclinada',
+            afterDesc: 'Sexo de pie por detrás',
+            prompt: 'Standing doggystyle sex, the woman bent forward standing while being taken from behind, rhythmic thrusting, breasts swinging. Static camera, no zoom.',
+            themeColor: '#ea580c', motionStyle: 'loop'
+        },
+        {
+            id: 'vid-sex-machine', loraId: 'sex_machine',
+            name: 'Máquina de Sexo +18', badge: 'LoRA: Sex Machine',
+            beforeDesc: 'Foto reclinada o de espaldas',
+            afterDesc: 'Penetrada por una máquina automática',
+            prompt: 'The woman being penetrated by a mechanical sex machine, rhythmic automatic thrusting, her body shaking with each pump. Static camera, no zoom.',
+            themeColor: '#64748b', motionStyle: 'loop'
+        },
+        {
+            id: 'vid-squirt-shura', loraId: 'squirt_shura',
+            name: 'Squirting (shura) +18', badge: 'LoRA: Squirt v2',
+            beforeDesc: 'Foto desnuda',
+            afterDesc: 'Variante de squirting estilo shura',
+            prompt: 'The woman masturbating rapidly then squirting hard, liquid spraying during climax. Static camera, no zoom.',
+            themeColor: '#38bdf8', motionStyle: 'loop'
+        },
+        {
+            id: 'vid-lactate', loraId: 'lactate_shura',
+            name: 'Lactancia +18', badge: 'LoRA: Lactating',
+            beforeDesc: 'Foto con pecho descubierto',
+            afterDesc: 'Los pezones expulsan leche al presionar',
+            prompt: 'The woman squeezing her bare breasts, milk spraying from her nipples, lactating motion. Static camera, no zoom.',
+            themeColor: '#f8fafc', motionStyle: 'breathing'
+        },
+        {
+            id: 'vid-fmas', loraId: 'fmas_shura',
+            name: 'Dedos Anales +18', badge: 'LoRA: fmas-shura',
+            beforeDesc: 'Foto de espaldas',
+            afterDesc: 'Juego anal con dedos',
+            prompt: 'The woman fingering herself anally, slow insertion motion, pleasure expression. Static camera, no zoom.',
+            themeColor: '#a16207', motionStyle: 'breathing'
+        },
+        {
+            id: 'vid-titfuck', loraId: 'titfuck',
+            name: 'Paja con Pechos +18', badge: 'LoRA: Titfuck',
+            beforeDesc: 'Foto con pecho descubierto',
+            afterDesc: 'Paizuri: aprieta el pecho alrededor del pene',
+            prompt: 'Titfuck paizuri, the woman squeezing her large breasts around a penis, moving them up and down. Static camera, no zoom.',
+            themeColor: '#f9a8d4', motionStyle: 'loop'
+        },
+        {
+            id: 'vid-hand-panties', loraId: 'hand_panties',
+            name: 'Mano en las Bragas +18', badge: 'LoRA: Hand in Panties',
+            beforeDesc: 'Foto con bragas visibles',
+            afterDesc: 'Mete la mano dentro de las bragas',
+            prompt: 'The woman sliding her hand inside her panties, touching herself, subtle sensual motion, biting her lip. Static camera, no zoom.',
+            themeColor: '#e879f9', motionStyle: 'breathing'
+        },
+        {
+            id: 'vid-pov-handjob', loraId: 'pov_handjob',
+            name: 'Paja POV +18', badge: 'LoRA: POV Handjob',
+            beforeDesc: 'Foto en primera persona',
+            afterDesc: 'Masturbación con la mano en POV',
+            prompt: 'POV handjob, her hand stroking a penis up and down in first person view, looking up at the viewer. Static camera POV, no zoom.',
+            themeColor: '#fda4af', motionStyle: 'loop'
+        },
+        {
+            id: 'vid-deepthroat', loraId: 'deepthroat',
+            name: 'Garganta Profunda +18', badge: 'LoRA: Deepthroat',
+            beforeDesc: 'Foto de rostro o boca',
+            afterDesc: 'Felación profunda',
+            prompt: 'Deepthroat blowjob, taking the penis deep into her mouth and throat, bobbing head motion. Static camera, no zoom.',
+            themeColor: '#f87171', motionStyle: 'loop'
+        },
+        {
+            id: 'vid-ult-deepthroat', loraId: 'ult_deepthroat',
+            name: 'Garganta Profunda Extrema +18', badge: 'LoRA: Ult. Deepthroat',
+            beforeDesc: 'Foto de rostro',
+            afterDesc: 'Variante extrema de felación profunda',
+            prompt: 'Intense deepthroat, full throat penetration with long strokes, saliva detail. Static camera, no zoom.',
+            themeColor: '#dc2626', motionStyle: 'loop'
+        },
+        {
+            id: 'vid-fullnelson', loraId: 'fullnelson',
+            name: 'Full Nelson +18', badge: 'LoRA: Full Nelson',
+            beforeDesc: 'Foto de cuerpo completo',
+            afterDesc: 'Posición full nelson alzada por detrás',
+            prompt: 'Full nelson sex position, the woman held up from behind with arms locked, body bouncing with thrusts. Static camera, no zoom.',
+            themeColor: '#7f1d1d', motionStyle: 'loop'
+        },
+        {
+            id: 'vid-ahegao', loraId: 'ahegao',
+            name: 'Cara Ahegao +18', badge: 'LoRA: Ahegao',
+            beforeDesc: 'Foto de rostro',
+            afterDesc: 'Expresión ahegao: ojos en blanco y lengua fuera',
+            prompt: 'Ahegao face, eyes rolling back, tongue sticking out, expression of overwhelming pleasure. Static camera, no zoom.',
+            themeColor: '#c084fc', motionStyle: 'breathing'
+        },
+        {
+            id: 'vid-nipple-suck', loraId: 'nipple_suck',
+            name: 'Chupar Pezones +18', badge: 'LoRA: Nipple Suck',
+            beforeDesc: 'Foto con pecho descubierto',
+            afterDesc: 'Succión de pezones en primer plano',
+            prompt: 'Nipple sucking, a mouth licking and sucking her nipple, close-up, breast held gently. Static camera, no zoom.',
+            themeColor: '#fbb6ce', motionStyle: 'breathing'
+        },
+        {
+            id: 'vid-cunnilingus', loraId: 'cunnilingus',
+            name: 'Cunnilingus +18', badge: 'LoRA: Cunnilingus',
+            beforeDesc: 'Foto acostada con piernas abiertas',
+            afterDesc: 'Sexo oral sobre ella',
+            prompt: 'Cunnilingus oral sex, tongue licking between her legs, she arches with pleasure. Static camera, no zoom.',
+            themeColor: '#fb923c', motionStyle: 'breathing'
+        },
+        {
+            id: 'vid-dildo-ride', loraId: 'dildo_ride',
+            name: 'Montar Dildo +18', badge: 'LoRA: Dildo Ride',
+            beforeDesc: 'Foto agachada o sentada',
+            afterDesc: 'Monta un consolador con vaivén',
+            prompt: 'The woman riding a dildo, moving her hips up and down in a steady rhythm, moaning. Static camera, no zoom.',
+            themeColor: '#a21caf', motionStyle: 'loop'
+        },
+        {
+            id: 'vid-mast-cum', loraId: 'masturbation_cumshot',
+            name: 'Paja + Corrida +18', badge: 'LoRA: Stroke & Cum',
+            beforeDesc: 'Foto con pareja o modelo',
+            afterDesc: 'Masturbación terminando en eyaculación',
+            prompt: 'Hand stroking the penis fast until cumshot, ejaculation finish. Static camera, no zoom.',
+            themeColor: '#fef08a', motionStyle: 'loop'
+        },
+        {
+            id: 'vid-two-fingers', loraId: 'two_fingers',
+            name: 'Dos Dedos +18', badge: 'LoRA: Two Fingers',
+            beforeDesc: 'Foto desnuda',
+            afterDesc: 'Penetración con dos dedos',
+            prompt: 'Two fingers sliding in and out, fingering motion, wet close-up detail. Static camera, no zoom.',
+            themeColor: '#f472b6', motionStyle: 'breathing'
+        },
+        {
+            id: 'vid-erect', loraId: 'erect_penis',
+            name: 'Erección +18', badge: 'LoRA: Erection',
+            beforeDesc: 'Foto con modelo masculino',
+            afterDesc: 'El pene se pone erecto progresivamente',
+            prompt: 'The penis slowly rising into a full erection, natural progression. Static camera, no zoom.',
+            themeColor: '#78716c', motionStyle: 'breathing'
+        },
+        {
+            id: 'vid-genitals', loraId: 'genitals_helper',
+            name: 'Detalle Genital +18', badge: 'LoRA: Genitals Helper',
+            beforeDesc: 'Cualquier foto del acto',
+            afterDesc: 'Mejora el detalle anatómico genital del video',
+            prompt: 'Detailed realistic genitals, anatomically correct vulva and penis, close detail, natural motion. Static camera, no zoom.',
+            themeColor: '#fda4af', motionStyle: 'breathing'
+        },
+        {
+            id: 'vid-walk-back', loraId: 'walking_back',
+            name: 'Caminar de Espaldas', badge: 'LoRA: Walking Back',
+            beforeDesc: 'Foto de pie',
+            afterDesc: 'Se gira y camina alejándose de espaldas',
+            prompt: 'The woman turns around and walks away from the camera showing her back, natural walking motion, hips swaying. Static camera, no zoom.',
+            themeColor: '#22d3ee', motionStyle: 'turn'
+        },
+        {
+            id: 'vid-dogeza', loraId: 'dogeza',
+            name: 'Reverencia Dogeza', badge: 'LoRA: Dogeza',
+            beforeDesc: 'Foto de pie o arrodillada',
+            afterDesc: 'Se inclina en reverencia profunda',
+            prompt: 'The woman kneeling down into a deep dogeza bow, forehead to the floor, submissive pose. Static camera, no zoom.',
+            themeColor: '#eab308', motionStyle: 'turn'
+        },
+        {
+            id: 'vid-forward-bends', loraId: 'forward_bends',
+            name: 'Inclinación con Rebote', badge: 'LoRA: Fwd Bends',
+            beforeDesc: 'Foto de pie',
+            afterDesc: 'Se inclina al frente con rebote de pecho',
+            prompt: 'The woman bending forward repeatedly, her breasts bouncing with each bend, playful motion. Static camera, no zoom.',
+            themeColor: '#34d399', motionStyle: 'loop'
+        },
+        {
+            id: 'vid-slap', loraId: 'slap',
+            name: 'Bofetadas +18', badge: 'LoRA: Slap',
+            beforeDesc: 'Foto de rostro o pecho',
+            afterDesc: 'Bofetadas suaves con reacción',
+            prompt: 'Slapping motion, hand slapping her cheek or breasts, she reacts with a moan. Static camera, no zoom.',
+            themeColor: '#f43f5e', motionStyle: 'loop'
+        },
+        {
+            id: 'vid-hand-panties-v3', loraId: 'hand_panties_v3',
+            name: 'Mano en Bragas v3 +18', badge: 'LoRA: Panties v3',
+            beforeDesc: 'Foto con bragas',
+            afterDesc: 'Variante v3 de mano dentro de las bragas',
+            prompt: 'Her hand slips inside her panties rubbing herself slowly, sensual expression. Static camera, no zoom.',
+            themeColor: '#d946ef', motionStyle: 'breathing'
+        },
+        {
+            id: 'vid-kiss-you', loraId: 'kiss_you',
+            name: 'Beso a la Cámara', badge: 'LoRA: Kiss You',
+            beforeDesc: 'Foto de rostro',
+            afterDesc: 'Se acerca y besa la lente',
+            prompt: 'The woman leans toward the camera and kisses the lens, blowing a kiss, lips close-up. Static camera, no zoom.',
+            themeColor: '#f87171', motionStyle: 'breathing'
+        },
+        {
+            id: 'vid-dreamjob', loraId: 'dr34mj0b',
+            name: 'Felación Dreamjob +18', badge: 'LoRA: DR34MJ0B',
+            beforeDesc: 'Foto de rostro o boca',
+            afterDesc: 'Felación suave estilo dreamjob',
+            prompt: 'Slow sensual blowjob, lips sliding up and down the shaft, eye contact with the viewer. Static camera, no zoom.',
+            themeColor: '#818cf8', motionStyle: 'loop'
+        },
+        {
+            id: 'vid-innie', loraId: 'innie_pussy_t2v',
+            name: 'Primer Plano Íntimo +18', badge: 'LoRA: Innie T2V',
+            beforeDesc: 'Foto con piernas abiertas',
+            afterDesc: 'Primer plano detallado de la vulva',
+            prompt: 'Close-up of a smooth innie pussy, labia detail, slight natural movement. Static camera, no zoom.',
+            themeColor: '#fbcfe8', motionStyle: 'breathing'
+        }
+    ];
+
+    EXTRA_VIDEO_PRESETS.forEach((cfg, idx) => {
+        PRESETS.push(Object.assign({}, VIDEO_LORA_DEFAULTS, cfg, {
+            name: `${13 + idx}. ${cfg.name}`
+        }));
+    });
+
+    // Preset final totalmente personalizable (prompt libre + LoRA a elección)
+    PRESETS.push(Object.assign({}, VIDEO_LORA_DEFAULTS, {
+        id: 'vid-custom',
+        loraId: null,
+        customLoraSelectable: true,
+        name: `${13 + EXTRA_VIDEO_PRESETS.length}. ✨ Personalizado (Prompt Libre)`,
+        badge: 'Wan 2.1 Custom',
+        beforeDesc: 'Cualquier foto',
+        afterDesc: 'Video según tu propio prompt con el LoRA que elijas',
+        prompt: 'The woman poses naturally for the camera, gentle sensual movement, looking at the viewer. Static camera, no zoom.',
+        themeColor: '#facc15',
+        motionStyle: 'breathing'
+    }));
+
     PRESETS.forEach((preset) => {
         const categoryDir = preset.category === 'video' ? 'video' : 'image';
         const presetDir = `${PRESET_EXAMPLE_BASE}/${categoryDir}/${preset.id}`;

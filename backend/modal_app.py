@@ -55,6 +55,7 @@ CLOTH_SEG_DIR = "/root/models/segformer_clothes"
 WAN_LIGHTNING_BF16_REPO = "magespace/Wan2.1-I2V-14B-480P-Lightning-Diffusers"
 
 CIVITAI_WAN_LORAS = {
+    # --- Originales (Chroma111 / wangkanai mirrors) ---
     "str1p": (
         "https://huggingface.co/Chroma111/CivitAI-Archive/resolve/main/"
         "wan_video/str1p_v1.safetensors"
@@ -74,6 +75,221 @@ CIVITAI_WAN_LORAS = {
     "boob_grab": (
         "https://huggingface.co/Chroma111/CivitAI-Archive/resolve/main/"
         "wan_video/boob_grab_epoch045.safetensors"
+    ),
+    # --- Chroma111/CivitAI-Archive (nuevos) ---
+    "outfit_change": (
+        "https://huggingface.co/Chroma111/CivitAI-Archive/resolve/main/"
+        "wan_video/SuddenOutfitChange_V03.safetensors"
+    ),
+    "rip_shura": (
+        "https://huggingface.co/Chroma111/CivitAI-Archive/resolve/main/"
+        "wan_video/rip-shura-000006.safetensors"
+    ),
+    "pulldown_shura": (
+        "https://huggingface.co/Chroma111/CivitAI-Archive/resolve/main/"
+        "wan_video/pulldown-shura-final-000006.safetensors"
+    ),
+    "before_after": (
+        "https://huggingface.co/Chroma111/CivitAI-Archive/resolve/main/"
+        "wan_video/wan_i2v-480p-beforeafter_v1.safetensors"
+    ),
+    "woman_undressing": (
+        "https://huggingface.co/Chroma111/CivitAI-Archive/resolve/main/"
+        "wan_video/woman_undressing_v1.0_wan14b_epoch048.safetensors"
+    ),
+    "tittydrop_t2v": (
+        "https://huggingface.co/Chroma111/CivitAI-Archive/resolve/main/"
+        "wan_video/wan_tittydrop_v1_t2v_14b.safetensors"
+    ),
+    # --- wangkanai/wan21-fp8-loras-nsfw ---
+    "missionary_pov": (
+        "https://huggingface.co/wangkanai/wan21-fp8-loras-nsfw/resolve/main/"
+        "loras/wan/wan21-action-missionary-pov-i2v-v2.safetensors"
+    ),
+    "doggypov": (
+        "https://huggingface.co/wangkanai/wan21-fp8-loras-nsfw/resolve/main/"
+        "loras/wan/wan21-action-doggypov-v2.safetensors"
+    ),
+    "front_doggy": (
+        "https://huggingface.co/wangkanai/wan21-fp8-loras-nsfw/resolve/main/"
+        "loras/wan/wan21-action-front-doggy-plow-v2.safetensors"
+    ),
+    "orgasm_i2v": (
+        "https://huggingface.co/wangkanai/wan21-fp8-loras-nsfw/resolve/main/"
+        "loras/wan/wan21-action-orgasm-i2v-720p.safetensors"
+    ),
+    "doggystyle_front_t2v": (
+        "https://huggingface.co/wangkanai/wan21-fp8-loras-nsfw/resolve/main/"
+        "loras/wan/wan21-action-doggystylefromfront-t2v.safetensors"
+    ),
+    "missionary_pov_t2v": (
+        "https://huggingface.co/wangkanai/wan21-fp8-loras-nsfw/resolve/main/"
+        "loras/wan/wan21-action-missionary-pov-v2.safetensors"
+    ),
+    "orgasm_t2v": (
+        "https://huggingface.co/wangkanai/wan21-fp8-loras-nsfw/resolve/main/"
+        "loras/wan/wan21-action-orgasm-v2-t2v-14b.safetensors"
+    ),
+    # --- kimjob/wan_i2v_NSFW_lora (colección Wan 2.1 I2V) ---
+    "cowgirl": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/c0wg1rl_WAN-i2v-480p-80.safetensors"
+    ),
+    "pov_missionary_i2v": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/wan_pov_missionary_i2v_v1.1.safetensors"
+    ),
+    "squirt_i2v": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/wan-i2v-squirt-k3nk-234epo.safetensors"
+    ),
+    "jelly_hips": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/wan-jelly-hips-i2v-16epo-k3nk.safetensors"
+    ),
+    "fingering": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/fingering_i2v_e248.safetensors"
+    ),
+    "holdup": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/i2v_480p_zxtp_holdup_v1.safetensors"
+    ),
+    "anal_insertion": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/wan2.1-i2v-480p-anal-insertion-v1.0.safetensors"
+    ),
+    "pov_insertion": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/wan2.1-i2v-480p-pov-insertion-v1.0.safetensors"
+    ),
+    "flaccid": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/wan2.1-i2v-480p-flaccid-v1.0.safetensors"
+    ),
+    "cumshot": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/wan_cumshot_i2v.safetensors"
+    ),
+    "female_masturbation": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/wan_female_masturbation.safetensors"
+    ),
+    "kissing": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/WAN_Passionate_Kissing_v1.safetensors"
+    ),
+    "spanking": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/spanking_for_wan_v1_e128.safetensors"
+    ),
+    "standing_doggy": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/standingdoggy-shura-000005.safetensors"
+    ),
+    "sex_machine": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/sexmachine-shura-000003.safetensors"
+    ),
+    "squirt_shura": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/squirt-shura-final-000003.safetensors"
+    ),
+    "lactate_shura": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/lactate-shura-000002.safetensors"
+    ),
+    "fmas_shura": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/fmas-shura-final-000003.safetensors"
+    ),
+    "titfuck": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/BetterTitfuck_v4_July2025.safetensors"
+    ),
+    "hand_panties": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/I2V%20-%20Hand%20in%20Panties%20v4%20-%20720p.safetensors"
+    ),
+    "pov_handjob": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/I2V%20-%20POV%20Handjob.safetensors"
+    ),
+    "deepthroat": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/jfj-deepthroat-v1.safetensors"
+    ),
+    "ult_deepthroat": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/wan-ultimatedeepthroat-182epo-k3nk.safetensors"
+    ),
+    "fullnelson": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/wan-fullnelson-v3-60epo-k3nk.safetensors"
+    ),
+    "ahegao": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/ahegao_v1_e35_wan.safetensors"
+    ),
+    "nipple_suck": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/nippleSuckWan_e40.safetensors"
+    ),
+    "cunnilingus": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/cunn_wan_epoch_80.safetensors"
+    ),
+    "dildo_ride": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/dildo_ride-14b-v2.safetensors"
+    ),
+    "masturbation_cumshot": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/masturbation_cumshot_v1.1_e310.safetensors"
+    ),
+    "two_fingers": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/WanTwoFingers.safetensors"
+    ),
+    "erect_penis": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/erect_penis_epoch_80.safetensors"
+    ),
+    "genitals_helper": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/genitals_helper_v1.0_e219.safetensors"
+    ),
+    "walking_back": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/P002-The-Walking-Back-i2v-v20-000010_converted.safetensors"
+    ),
+    "dogeza": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/Dogeza.safetensors"
+    ),
+    "forward_bends": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/BouncingForwardBendsV01.safetensors"
+    ),
+    "slap": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/slap-v3.safetensors"
+    ),
+    "hand_panties_v3": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/T2V-I2V_h4nd_p4nties_v3.safetensors"
+    ),
+    "kiss_you": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/kiss%20you_V2_wan_comfy.safetensors"
+    ),
+    "dr34mj0b": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/WAN_dr34mj0b.safetensors"
+    ),
+    "innie_pussy_t2v": (
+        "https://huggingface.co/kimjob/wan_i2v_NSFW_lora/resolve/main/"
+        "loras/T2V%20-%20Innie%20Pussy%20v2%20-%2014B.safetensors"
     ),
 }
 
@@ -1759,14 +1975,10 @@ class VideoEngine:
                 f.write("ok")
             vol.commit()
 
+        self.lora_dir = lora_dir
         self.lora_paths = {}
-        for lora_id, url in CIVITAI_WAN_LORAS.items():
+        for lora_id in CIVITAI_WAN_LORAS:
             lpath = f"{lora_dir}/{lora_id}.safetensors"
-            if not os.path.exists(lpath) or os.path.getsize(lpath) < 10000:
-                try:
-                    urllib.request.urlretrieve(url, lpath)
-                except Exception as e:
-                    print(f"Warn download {lora_id}: {e}")
             if os.path.exists(lpath) and os.path.getsize(lpath) > 10000:
                 self.lora_paths[lora_id] = lpath
         vol.commit()
@@ -1805,9 +2017,40 @@ class VideoEngine:
             print(f"Video pose model warn: {e}")
             self.pose_model = None
 
-    def _select_lora_for_request(self, payload: dict) -> str:
+    def _ensure_lora_path(self, lora_id: str):
+        url = CIVITAI_WAN_LORAS.get(lora_id)
+        if not url:
+            return None
+        lpath = self.lora_paths.get(lora_id) or os.path.join(
+            self.lora_dir, f"{lora_id}.safetensors"
+        )
+        if not (os.path.exists(lpath) and os.path.getsize(lpath) > 10000):
+            import urllib.request
+
+            try:
+                print(f"Descargando LoRA {lora_id} bajo demanda...")
+                urllib.request.urlretrieve(url, lpath)
+                vol.commit()
+            except Exception as e:
+                print(f"LoRA download failed {lora_id}: {e}")
+                try:
+                    if os.path.exists(lpath):
+                        os.remove(lpath)
+                except OSError:
+                    pass
+                return None
+            if not (
+                os.path.exists(lpath) and os.path.getsize(lpath) > 10000
+            ):
+                return None
+        self.lora_paths[lora_id] = lpath
+        return lpath
+
+    def _select_lora_for_request(self, payload: dict):
         lora_id = payload.get("lora_id")
-        if lora_id in self.lora_paths:
+        if lora_id == "none":
+            return None
+        if lora_id in CIVITAI_WAN_LORAS:
             return lora_id
         prompt_low = str(payload.get("prompt", "")).lower()
         if "str1p" in prompt_low or "takes off" in prompt_low:
@@ -2565,7 +2808,12 @@ class VideoEngine:
                 self.pipe.unload_lora_weights()
             except Exception:
                 pass
-            lpath = self.lora_paths.get(chosen_lora)
+            self.current_loaded_lora = None
+            lpath = (
+                self._ensure_lora_path(chosen_lora)
+                if chosen_lora
+                else None
+            )
             if lpath and os.path.exists(lpath):
                 try:
                     self.pipe.load_lora_weights(
@@ -2579,7 +2827,7 @@ class VideoEngine:
                     print(f"Civitai LoRA warn: {e}")
                     self.current_loaded_lora = None
 
-        if self.current_loaded_lora == chosen_lora:
+        if chosen_lora and self.current_loaded_lora == chosen_lora:
             try:
                 self.pipe.set_adapters(
                     [chosen_lora], adapter_weights=[lora_scale]

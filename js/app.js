@@ -21,6 +21,7 @@
         fixedRefBefore: null,
         fixedRefAfter: null,
         currentPreset: null,
+        customLoraId: null,
         currentFilter: 'image',
         viewerMode: 'compare',
         lastGeneratedResultUrl: null,
@@ -422,7 +423,11 @@
             'denoiseOption',
             'engineOption'
         ];
-        const videoOnlyIds = ['videoDurationBox', 'faceReferenceBox'];
+        const videoOnlyIds = [
+            'videoDurationBox',
+            'faceReferenceBox',
+            'promptAssistantBox'
+        ];
 
         imageOnlyIds.forEach((id) => setElementHidden(id, isVideo));
         videoOnlyIds.forEach((id) => setElementHidden(id, !isVideo));
@@ -521,6 +526,56 @@
             const btn = document.getElementById(`eng-${k}`);
             if (btn) btn.className = k === key ? active : inactive;
         });
+    }
+
+    function populateCustomLoraSelect() {
+        const select = document.getElementById('customLoraSelect');
+        if (!select) return;
+        const options = [{ id: '', label: 'Sin LoRA (solo tu prompt)' }];
+        StudioAI.Config.PRESETS.forEach((p) => {
+            if (
+                p.category === 'video' &&
+                p.loraId &&
+                !options.some((o) => o.id === p.loraId)
+            ) {
+                options.push({ id: p.loraId, label: p.badge || p.loraId });
+            }
+        });
+        select.innerHTML = options
+            .map((o) => `<option value="${o.id}">${o.label}</option>`)
+            .join('');
+        select.value = state.customLoraId || '';
+    }
+
+    function setCustomLora(value) {
+        state.customLoraId = value || '';
+    }
+
+    function applyAssistantPrompt() {
+        const promptEl = document.getElementById('prompt');
+        if (!promptEl) return;
+        const parts = [
+            'assistAction',
+            'assistFocus',
+            'assistPace',
+            'assistCamera',
+            'assistExtra'
+        ]
+            .map((id) => {
+                const el = document.getElementById(id);
+                return el && el.value ? el.value.trim() : '';
+            })
+            .filter(Boolean);
+        if (!parts.length) return;
+        promptEl.value =
+            parts.join(', ') + '. Realistic motion, natural skin detail.';
+    }
+
+    function resetPresetPrompt() {
+        const promptEl = document.getElementById('prompt');
+        if (promptEl && state.currentPreset) {
+            promptEl.value = state.currentPreset.prompt;
+        }
     }
 
     function setQuality(quality) {
@@ -629,6 +684,13 @@
 
         if (badgeEl) badgeEl.textContent = preset.name;
         if (promptEl) promptEl.value = preset.prompt;
+
+        if (preset.customLoraSelectable) {
+            populateCustomLoraSelect(preset);
+            setElementHidden('customLoraRow', false);
+        } else {
+            setElementHidden('customLoraRow', true);
+        }
         if (stepsEl) stepsEl.value = String(preset.steps);
         if (stepsValEl) stepsValEl.textContent = String(preset.steps);
         if (cfgEl) cfgEl.value = String(preset.cfg);
@@ -1355,7 +1417,11 @@
                 cfgScale,
                 denoiseStrength,
                 loraScale,
-                loraId: state.currentPreset ? state.currentPreset.loraId : null,
+                loraId: state.currentPreset
+                    ? state.currentPreset.customLoraSelectable
+                        ? state.customLoraId || 'none'
+                        : state.currentPreset.loraId
+                    : null,
                 maskTarget: state.currentPreset ? state.currentPreset.maskTarget : 'all_clothes',
                 skinPreAdapt: state.currentPreset ? state.currentPreset.skinPreAdapt : true,
                 quality: state.selectedQuality,
@@ -1552,6 +1618,9 @@
         setQuality,
         setImageEngine,
         setVideoDuration,
+        setCustomLora,
+        applyAssistantPrompt,
+        resetPresetPrompt,
         generateMedia,
         setViewerMode,
         useResultForVideo,
