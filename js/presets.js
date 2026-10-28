@@ -779,18 +779,346 @@
         motionStyle: 'breathing'
     }));
 
+    // =====================================================================
+    // DESCRIPCIONES, CONSEJOS DE POSE Y CLASIFICACIÓN POR TIPO DE ENTRADA
+    // inputType: 'undress' (acepta ropa y genera desnudo),
+    //            'nude' (necesita desnudo/acción previa, solo anima),
+    //            'any'   (funciona con cualquier foto)
+    // previewLink: URL externa (Drive) con un GIF/video de muestra real
+    // =====================================================================
+    const PRESET_DETAILS = {
+        'img-realism': {
+            desc: 'Desnuda completamente a la persona conservando rostro, pose y fondo.',
+            tips: 'Foto de medio cuerpo o cuerpo completo, persona centrada con buena luz.'
+        },
+        'img-fullbody': {
+            desc: 'Expande la foto hacia abajo completando cadera, muslos y piernas, y la desnuda.',
+            tips: 'Ideal con fotos cortadas a la cintura o muslos; no uses encuadres de solo rostro.'
+        },
+        'img-topless': {
+            desc: 'Quita solo la parte de arriba dejando el pecho descubierto, conserva la ropa de abajo.',
+            tips: 'Medio cuerpo con top, blusa o bikini visibles.'
+        },
+        'img-outfit': {
+            desc: 'Cambia la ropa por lencería de encaje transparente.',
+            tips: 'Funciona con cualquier prenda; mejor si es ajustada al cuerpo.'
+        },
+        'img-pose': {
+            desc: 'Viste un micro bikini de hilo que apenas cubre nada.',
+            tips: 'Cuerpo completo o medio cuerpo, de pie o sentada.'
+        },
+        'img-upscale': {
+            desc: 'Abre la camisa o blusa exponiendo el pecho.',
+            tips: 'Fotos con camisa, blusa o chaqueta; mejor si tiene botones.'
+        },
+        'img-enhance': {
+            desc: 'Restaura la foto sin desnudar: quita grano y mejora nitidez.',
+            tips: 'Cualquier foto con ruido, mala luz o compresión.'
+        },
+        'vid-breathing': {
+            desc: 'Se quita la parte de arriba y queda en topless frente a cámara.',
+            tips: 'Foto con top o camiseta puesta, medio cuerpo, mirando a cámara.',
+            inputType: 'undress', previewLink: ''
+        },
+        'vid-camera': {
+            desc: 'Sube la blusa y deja caer el pecho con rebote físico realista.',
+            tips: 'Blusa o sostén cubriendo el pecho; encuadre de cintura hacia arriba.',
+            inputType: 'undress', previewLink: ''
+        },
+        'vid-turn': {
+            desc: 'Cubre la lente con la mano y al quitarla aparece completamente desnuda.',
+            tips: 'Cuerpo completo o medio cuerpo; funciona con cualquier ropa.',
+            inputType: 'undress', previewLink: ''
+        },
+        'vid-wind': {
+            desc: 'Balanceo sensual del cuerpo con rebote natural del pecho.',
+            tips: 'Necesita foto ya desnuda o con lencería mínima; no quita ropa.',
+            inputType: 'nude', previewLink: ''
+        },
+        'vid-loop': {
+            desc: 'Se agarra y aprieta el pecho con sus propias manos.',
+            tips: 'Pecho visible (topless o desnuda), medio cuerpo.',
+            inputType: 'nude', previewLink: ''
+        },
+        'vid-outfit-change': {
+            desc: 'Cambia de golpe su outfit por lencería sexy a mitad del video.',
+            tips: 'Cualquier ropa; cuerpo completo da el mejor efecto.',
+            inputType: 'undress', previewLink: ''
+        },
+        'vid-rip': {
+            desc: 'Se rasga la ropa de forma agresiva exponiendo su cuerpo.',
+            tips: 'Top, bodysuit o leggings; ropa ajustada funciona mejor.',
+            inputType: 'undress', previewLink: ''
+        },
+        'vid-pulldown': {
+            desc: 'Baja su top y pantalón lentamente hasta quedar desnuda.',
+            tips: 'Foto con top y pantalón o falda; medio cuerpo o cuerpo completo.',
+            inputType: 'undress', previewLink: ''
+        },
+        'vid-before-after': {
+            desc: 'Transición directa de vestida a desnuda en la misma pose.',
+            tips: 'Pose clara de cuerpo completo con fondo simple.',
+            inputType: 'undress', previewLink: ''
+        },
+        'vid-undress': {
+            desc: 'Se desviste pieza por pieza hasta quedar completamente nude.',
+            tips: 'Mejor con varias prendas puestas; distancia media.',
+            inputType: 'undress', previewLink: ''
+        },
+        'vid-tittydrop-t2v': {
+            desc: 'Variante alternativa de levantar la blusa y soltar el pecho.',
+            tips: 'Blusa cubriendo el pecho; encuadre de cintura hacia arriba.',
+            inputType: 'undress'
+        },
+        'vid-missionary': {
+            desc: 'Sexo en misionero visto en primera persona con vaivén rítmico.',
+            tips: 'Foto acostada o reclinada con piernas abiertas visibles.',
+            inputType: 'nude'
+        },
+        'vid-doggypov': {
+            desc: 'Sexo por detrás en primera persona con vaivén de caderas.',
+            tips: 'Foto de espaldas o en cuatro; nalgas visibles.',
+            inputType: 'nude'
+        },
+        'vid-front-doggy': {
+            desc: 'Vaivén en posición de cuatro visto desde el frente.',
+            tips: 'Foto en cuatro de frente con el pecho colgando visible.',
+            inputType: 'nude'
+        },
+        'vid-orgasm': {
+            desc: 'Orgasmo intenso con temblor corporal y expresión de éxtasis.',
+            tips: 'Rostro y torso visibles; funciona con casi cualquier pose.',
+            inputType: 'nude'
+        },
+        'vid-doggy-front-t2v': {
+            desc: 'Variante de doggystyle frontal (entrenado en T2V).',
+            tips: 'Foto en cuatro de frente; resultados pueden variar en I2V.',
+            inputType: 'nude'
+        },
+        'vid-missionary-t2v': {
+            desc: 'Variante de misionero (entrenado en T2V).',
+            tips: 'Acostada con piernas abiertas; puede variar en I2V.',
+            inputType: 'nude'
+        },
+        'vid-orgasm-t2v': {
+            desc: 'Variante de orgasmo (entrenado en T2V).',
+            tips: 'Rostro visible; puede variar en I2V.',
+            inputType: 'nude'
+        },
+        'vid-cowgirl': {
+            desc: 'Monta encima en posición cowgirl rebotando rítmicamente.',
+            tips: 'Foto sentada o agachada de frente sugiriendo posición encima.',
+            inputType: 'nude', previewLink: ''
+        },
+        'vid-pov-missionary': {
+            desc: 'Misionero POV de la colección kimjob con embestidas profundas.',
+            tips: 'Acostada con piernas abiertas, vista frontal.',
+            inputType: 'nude'
+        },
+        'vid-squirt': {
+            desc: 'Eyaculación femenina visible durante el clímax.',
+            tips: 'Foto desnuda con piernas abiertas o masturbándose.',
+            inputType: 'nude', previewLink: ''
+        },
+        'vid-jelly-hips': {
+            desc: 'Mueve las caderas de lado a lado con rebote suave de piel.',
+            tips: 'De pie, cuerpo completo; funciona con ropa pero mejor desnuda.',
+            inputType: 'any', previewLink: ''
+        },
+        'vid-fingering': {
+            desc: 'Se masturba metiéndose los dedos con expresión de placer.',
+            tips: 'Desnuda o con la mano cerca de la entrepierna.',
+            inputType: 'nude'
+        },
+        'vid-holdup': {
+            desc: 'Posición de pie alzada con piernas envueltas.',
+            tips: 'Cuerpo completo; mejor con pareja o pose que lo sugiera.',
+            inputType: 'nude'
+        },
+        'vid-anal': {
+            desc: 'Inserción anal lenta y progresiva.',
+            tips: 'De espaldas inclinada, nalgas visibles.',
+            inputType: 'nude'
+        },
+        'vid-pov-insertion': {
+            desc: 'Penetración lenta en primera persona a primer plano.',
+            tips: 'Zona pélvica visible y cercana a cámara.',
+            inputType: 'nude'
+        },
+        'vid-flaccid': {
+            desc: 'El pene pasa de flácido a completamente erecto.',
+            tips: 'Necesita el pene visible en la foto.',
+            inputType: 'nude'
+        },
+        'vid-cumshot': {
+            desc: 'Finaliza con eyaculación visible sobre el cuerpo o rostro.',
+            tips: 'Foto del acto en curso o del objetivo a primer plano.',
+            inputType: 'nude'
+        },
+        'vid-solo-fem': {
+            desc: 'Se masturba sola moviendo las caderas hasta el clímax.',
+            tips: 'Desnuda reclinada o sentada con piernas abiertas.',
+            inputType: 'nude'
+        },
+        'vid-kissing': {
+            desc: 'Beso francés profundo y apasionado.',
+            tips: 'Ideal con foto de pareja; rostros cercanos y visibles.',
+            inputType: 'any'
+        },
+        'vid-spanking': {
+            desc: 'Nalgadas repetidas con rebote de piel en cada golpe.',
+            tips: 'Espalda o nalgas visibles, mejor desnuda.',
+            inputType: 'nude'
+        },
+        'vid-standing-doggy': {
+            desc: 'Sexo de pie penetrando por detrás.',
+            tips: 'De pie inclinada hacia adelante, de espaldas o perfil.',
+            inputType: 'nude'
+        },
+        'vid-sex-machine': {
+            desc: 'Una máquina automática la penetra rítmicamente.',
+            tips: 'Reclinada o en cuatro con la zona pélvica visible.',
+            inputType: 'nude'
+        },
+        'vid-squirt-shura': {
+            desc: 'Variante alternativa de squirting (estilo shura).',
+            tips: 'Desnuda con piernas abiertas.',
+            inputType: 'nude'
+        },
+        'vid-lactate': {
+            desc: 'Presiona sus pechos y los pezones expulsan leche.',
+            tips: 'Pecho desnudo visible, medio cuerpo.',
+            inputType: 'nude'
+        },
+        'vid-fmas': {
+            desc: 'Se toca analmente con los dedos.',
+            tips: 'De espaldas o con nalgas visibles.',
+            inputType: 'nude'
+        },
+        'vid-titfuck': {
+            desc: 'Aprieta sus pechos alrededor de un pene (paizuri).',
+            tips: 'Pecho desnudo; mejor si la foto sugiere pene entre ellos.',
+            inputType: 'nude'
+        },
+        'vid-hand-panties': {
+            desc: 'Desliza su mano dentro de las bragas para tocarse.',
+            tips: 'Foto con bragas o ropa interior visible.',
+            inputType: 'nude'
+        },
+        'vid-pov-handjob': {
+            desc: 'Masturba un pene con la mano en primera persona.',
+            tips: 'Encuadre donde quepa una mano y el pene en primer plano.',
+            inputType: 'nude'
+        },
+        'vid-deepthroat': {
+            desc: 'Felación profunda con movimiento de cabeza.',
+            tips: 'Rostro de frente con la boca visible.',
+            inputType: 'nude'
+        },
+        'vid-ult-deepthroat': {
+            desc: 'Variante extrema de felación profunda.',
+            tips: 'Rostro de frente con la boca visible.',
+            inputType: 'nude'
+        },
+        'vid-fullnelson': {
+            desc: 'La alzan por detrás en posición full nelson.',
+            tips: 'Cuerpo completo; mejor si ya sugiere ser sostenida.',
+            inputType: 'nude'
+        },
+        'vid-ahegao': {
+            desc: 'Cara de placer extremo: ojos en blanco y lengua fuera.',
+            tips: 'Primer plano del rostro.',
+            inputType: 'any'
+        },
+        'vid-nipple-suck': {
+            desc: 'Una boca chupa y lame su pezón a primer plano.',
+            tips: 'Pecho desnudo, primer plano del pezón.',
+            inputType: 'nude'
+        },
+        'vid-cunnilingus': {
+            desc: 'Recibe sexo oral con arqueo de placer.',
+            tips: 'Acostada con piernas abiertas.',
+            inputType: 'nude'
+        },
+        'vid-dildo-ride': {
+            desc: 'Monta un consolador moviendo las caderas.',
+            tips: 'Sentada o agachada; zona pélvica visible.',
+            inputType: 'nude'
+        },
+        'vid-mast-cum': {
+            desc: 'Paja rápida que termina en eyaculación.',
+            tips: 'Pene visible o el acto en curso.',
+            inputType: 'nude'
+        },
+        'vid-two-fingers': {
+            desc: 'Penetración con dos dedos, detalle húmedo.',
+            tips: 'Zona genital visible de cerca.',
+            inputType: 'nude'
+        },
+        'vid-erect': {
+            desc: 'El pene se va poniendo erecto progresivamente.',
+            tips: 'Pene flácido visible en la foto.',
+            inputType: 'nude'
+        },
+        'vid-genitals': {
+            desc: 'Realza el detalle anatómico genital del video.',
+            tips: 'Zona genital visible; combina bien con otros prompts.',
+            inputType: 'nude'
+        },
+        'vid-walk-back': {
+            desc: 'Se gira y camina alejándose mostrando su espalda.',
+            tips: 'De pie con espacio para caminar; funciona con ropa.',
+            inputType: 'any', previewLink: ''
+        },
+        'vid-dogeza': {
+            desc: 'Se arrodilla en una reverencia profunda de sumisión.',
+            tips: 'De pie o de rodillas, cuerpo completo.',
+            inputType: 'any'
+        },
+        'vid-forward-bends': {
+            desc: 'Se inclina al frente repetidamente con rebote del pecho.',
+            tips: 'De pie de frente; mejor topless o desnuda.',
+            inputType: 'any'
+        },
+        'vid-slap': {
+            desc: 'Bofetadas suaves en rostro o pecho con reacción.',
+            tips: 'Rostro o pecho visible.',
+            inputType: 'nude'
+        },
+        'vid-hand-panties-v3': {
+            desc: 'Variante v3 de mano dentro de las bragas.',
+            tips: 'Foto con bragas visibles.',
+            inputType: 'nude'
+        },
+        'vid-kiss-you': {
+            desc: 'Se acerca y besa directamente la lente.',
+            tips: 'Rostro cerca de la cámara, bien enfocado.',
+            inputType: 'any', previewLink: ''
+        },
+        'vid-dreamjob': {
+            desc: 'Felación suave con contacto visual al espectador.',
+            tips: 'Rostro visible de frente.',
+            inputType: 'nude'
+        },
+        'vid-innie': {
+            desc: 'Primer plano detallado de la vulva.',
+            tips: 'Piernas abiertas, zona genital visible.',
+            inputType: 'nude'
+        },
+        'vid-custom': {
+            desc: 'Prompt totalmente libre: tú describes la acción y eliges el LoRA.',
+            tips: 'Usa el Asistente de Prompt para componer la descripción; el LoRA correcto depende de la acción.',
+            inputType: 'any'
+        }
+    };
+
     PRESETS.forEach((preset) => {
+        const extra = PRESET_DETAILS[preset.id];
+        if (extra) Object.assign(preset, extra);
         const categoryDir = preset.category === 'video' ? 'video' : 'image';
         const presetDir = `${PRESET_EXAMPLE_BASE}/${categoryDir}/${preset.id}`;
         preset.exampleBefore = `${presetDir}/before`;
         preset.exampleAfter = `${presetDir}/after`;
-        if (preset.category === 'video') {
-            preset.videoPreviews = {
-                5: `${presetDir}/preview-5s`,
-                10: `${presetDir}/preview-10s`,
-                20: `${presetDir}/preview-20s`
-            };
-        }
     });
 
     StudioAI.Config = {

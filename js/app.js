@@ -600,9 +600,41 @@
             (p) => p.category === state.currentFilter
         );
 
+        const VIDEO_GROUPS = [
+            ['undress', '🔓 ACEPTA ROPA — el video genera el desnudo'],
+            ['nude', '🔥 NECESITA NUDE/ACCIÓN — solo añade movimiento'],
+            ['any', '✨ FUNCIONA CON CUALQUIER FOTO']
+        ];
+        if (state.currentFilter === 'video') {
+            const order = { undress: 0, nude: 1, any: 2 };
+            filtered.sort(
+                (a, b) =>
+                    (order[a.inputType] !== undefined
+                        ? order[a.inputType]
+                        : 2) -
+                    (order[b.inputType] !== undefined
+                        ? order[b.inputType]
+                        : 2)
+            );
+        }
+        let lastGroup = null;
+
         filtered.forEach((preset) => {
             const isSelected = state.currentPreset && state.currentPreset.id === preset.id;
             const isVideo = preset.category === 'video';
+
+            if (isVideo) {
+                const grp = preset.inputType || 'any';
+                const meta = VIDEO_GROUPS.find(([k]) => k === grp);
+                if (meta && grp !== lastGroup) {
+                    lastGroup = grp;
+                    const gheader = document.createElement('div');
+                    gheader.className =
+                        'sm:col-span-2 text-[10px] font-bold uppercase tracking-wide text-slate-500 border-t border-slate-800/70 pt-2 mt-1 first:border-0 first:pt-0 first:mt-0';
+                    gheader.textContent = meta[1];
+                    grid.appendChild(gheader);
+                }
+            }
 
             const card = document.createElement('div');
             card.dataset.presetId = preset.id;
@@ -632,20 +664,30 @@
 
             const descP = document.createElement('p');
             descP.className = 'text-[11px] text-slate-400';
-
-            const labelSpan = document.createElement('span');
-            labelSpan.className = 'text-slate-500';
-            labelSpan.textContent = 'Resultado: ';
-
-            const strongDesc = document.createElement('strong');
-            strongDesc.className = 'text-slate-200 font-medium';
-            strongDesc.textContent = preset.afterDesc;
-
-            descP.appendChild(labelSpan);
-            descP.appendChild(strongDesc);
+            descP.textContent = preset.desc || preset.afterDesc;
 
             card.appendChild(header);
             card.appendChild(descP);
+
+            if (preset.tips) {
+                const tipsP = document.createElement('p');
+                tipsP.className = 'text-[10px] text-slate-500 italic';
+                tipsP.textContent = `📷 ${preset.tips}`;
+                card.appendChild(tipsP);
+            }
+
+            if (preset.previewLink) {
+                const link = document.createElement('a');
+                link.href = preset.previewLink;
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
+                link.className =
+                    'text-[10px] font-bold text-fuchsia-400 hover:text-fuchsia-300 transition w-fit';
+                link.textContent = '🎬 Ver ejemplo real ↗';
+                link.addEventListener('click', (e) => e.stopPropagation());
+                card.appendChild(link);
+            }
+
             grid.appendChild(card);
         });
     }

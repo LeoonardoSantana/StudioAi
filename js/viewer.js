@@ -279,10 +279,20 @@
         ctx.fillText('Vista previa del preset', 320, 152);
         ctx.fillStyle = '#cbd5e1';
         ctx.font = '500 13px Inter, system-ui, sans-serif';
-        ctx.fillText(`Agrega preview-${durationSeconds}s.gif`, 320, 182);
+        ctx.fillText(
+            preset.previewLink
+                ? 'Pulsa "🎬 Ejemplo real" para ver una muestra'
+                : 'La animación real se genera con tu foto',
+            320,
+            182
+        );
         ctx.fillStyle = '#64748b';
         ctx.font = '11px Inter, system-ui, sans-serif';
-        ctx.fillText('La animación se mostrará aquí automáticamente', 320, 207);
+        ctx.fillText(
+            `El resultado aparecerá aquí en ${durationSeconds} seg de video`,
+            320,
+            207
+        );
     }
 
     function startVideoDemoCanvas(preset, videoDurationSeconds) {
@@ -301,11 +311,21 @@
 
         const labelEl = document.getElementById('videoDemoLabel');
         const infoEl = document.getElementById('videoPresetInfo');
+        const sampleLink = document.getElementById('presetSampleLink');
         if (labelEl) {
             labelEl.textContent = `Demo Wan 2.1: ${activePreset.name} (${videoDurationSeconds}s)`;
         }
         if (infoEl) {
             infoEl.textContent = `${activePreset.afterDesc} • ${videoDurationSeconds} seg`;
+        }
+        if (sampleLink) {
+            if (activePreset.previewLink) {
+                sampleLink.href = activePreset.previewLink;
+                sampleLink.classList.remove('hidden');
+            } else {
+                sampleLink.classList.add('hidden');
+                sampleLink.removeAttribute('href');
+            }
         }
 
         stopVideoDemoCanvas();

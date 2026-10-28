@@ -24,7 +24,9 @@ import imageio_ffmpeg
 API = "https://leonardo-sh170--estudio-ia-serverless-api.us-east.modal.run"
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 IMG_PATH = os.path.join(ROOT, "pruebas", "reference.JPG")
-OUT_BASE = os.path.join(ROOT, "assets", "presets", "video")
+# Los GIFs van a pruebas/ (gitignored) para subirlos a Drive y enlazarlos
+# mediante el campo previewLink de cada preset en js/presets.js
+OUT_BASE = os.path.join(ROOT, "pruebas", "preview_gifs")
 
 WAN_NEGATIVE = (
     "lowres, blurry, overexposed, worst quality, low quality, deformed, "
@@ -170,8 +172,8 @@ def main():
     for preset_id, lora_id, prompt in PRESETS:
         if only and preset_id not in only:
             continue
-        out_dir = os.path.join(OUT_BASE, preset_id)
-        gif_path = os.path.join(out_dir, "preview-5s.gif")
+        os.makedirs(OUT_BASE, exist_ok=True)
+        gif_path = os.path.join(OUT_BASE, f"{preset_id}.gif")
         if os.path.exists(gif_path):
             print(f"[skip] {preset_id} ya tiene GIF")
             continue
@@ -186,7 +188,6 @@ def main():
             print(f"[fail] {preset_id}: {e}")
             continue
 
-        os.makedirs(out_dir, exist_ok=True)
         with tempfile.NamedTemporaryFile(
             suffix=".mp4", delete=False
         ) as tmp:
