@@ -1532,6 +1532,9 @@
                 outpaintControlScale: state.currentPreset
                     ? state.currentPreset.outpaintControlScale
                     : null,
+                refineStrength: state.currentPreset
+                    ? state.currentPreset.refineStrength
+                    : null,
                 onSubmitted: (callId, mediaType) =>
                     StudioAI.Storage.saveSetting(PENDING_JOB_KEY, {
                         callId,

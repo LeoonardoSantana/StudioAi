@@ -450,6 +450,7 @@ class ImageEngine:
         )
         self.pose_model = YOLO("/root/models/yolov8n-pose.pt")
         self._txt2img = None
+        self._img2img = None
         self._real_esrgan = None
         self._txt2img_cls = StableDiffusionXLPipeline
         self._torch = torch
@@ -523,6 +524,22 @@ class ImageEngine:
             self._txt2img.watermark = None
             self._txt2img.safety_checker = None
         return self._txt2img
+
+    def _get_img2img(self):
+        """img2img sobre el checkpoint base, para el pase de refinado.
+
+        Reutiliza los componentes del txt2img (from_pipe comparte unet/vae),
+        así no duplica memoria de GPU.
+        """
+        if self._img2img is None:
+            from diffusers import StableDiffusionXLImg2ImgPipeline
+
+            self._img2img = StableDiffusionXLImg2ImgPipeline.from_pipe(
+                self._get_txt2img()
+            )
+            self._img2img.watermark = None
+            self._img2img.safety_checker = None
+        return self._img2img
 
     def _get_real_esrgan(self):
         """Carga Real-ESRGAN sin depender de basicsr/realesrgan."""
@@ -1427,6 +1444,10 @@ class ImageEngine:
         lora_scale = max(
             0.0, min(1.0, float(payload.get("lora_scale") or 0.0))
         )
+        refine_strength = max(
+            0.0,
+            min(0.5, float(payload.get("refine_strength") or 0.0)),
+        )
         mask_target = payload.get("mask_target", "all_clothes")
         inpaint_pipe = self.inpaint
         detail_ready = self.detail_adapter_loaded
@@ -1872,6 +1893,39 @@ class ImageEngine:
             final_work = outpainted
         else:
             final_work = first_stage
+
+        if refine_strength > 0:
+            # Pase img2img ligero sobre el composite a resolución SDXL:
+            # unifica grano, color e iluminación entre la zona generada
+            # y la foto original (o el lienzo outpaint en full_body).
+            from PIL import ImageFilter
+
+            if full_body:
+                refine_input = final_work
+            else:
+                soft_refine = active_mask.filter(
+                    ImageFilter.MaxFilter(5)
+                ).filter(ImageFilter.GaussianBlur(8))
+                refine_input = Image.composite(
+                    final_work, work_img, soft_refine
+                )
+            refine_gen = None
+            if seed is not None:
+                refine_gen = self._torch.Generator(
+                    device="cuda"
+                ).manual_seed(int(seed) + 2000)
+            final_work = self._get_img2img()(
+                prompt=clean_prompt,
+                negative_prompt=negative_prompt,
+                image=refine_input,
+                strength=refine_strength,
+                generator=refine_gen,
+                num_inference_steps=steps,
+                guidance_scale=cfg_scale,
+            ).images[0]
+            print(
+                f"Refine pass: strength={refine_strength} steps={steps}"
+            )
 
         if full_body:
             # El lienzo cambió (outpaint): devolver todo lo generado.

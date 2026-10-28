@@ -111,6 +111,21 @@ TESTS = {
         "steps": 30, "cfg_scale": 5.0, "denoising_strength": 1.0,
         "blend_mode": "raw", "preserve_limbs": True, "seed": 7,
     },
+    # Igual que "ab" pero con pase de refinado img2img (A/B seed 7)
+    "abrefine": {
+        "prompt": (
+            "photorealistic fully nude woman, same seated pose, same body position "
+            "and camera framing, empty hands resting naturally, completely naked, "
+            "bare breasts, natural nipples and areolae, bare abdomen and navel, "
+            "exposed vulva, bare legs and bare feet, natural skin texture, "
+            "soft natural lighting, uncensored"
+        ),
+        "negative_prompt": NUDE_NEG,
+        "mask_target": "all_clothes",
+        "steps": 30, "cfg_scale": 5.0, "denoising_strength": 1.0,
+        "blend_mode": "raw", "preserve_limbs": True, "seed": 7,
+        "refine_strength": 0.3,
+    },
     # Igual que "ab" pero cfg 7 (aísla si el moteado viene del cfg bajo)
     "ab7": {
         "prompt": (
@@ -243,7 +258,8 @@ def main():
     }
     for k in ("denoising_strength", "blend_mode", "preserve_limbs", "seed",
               "expand_body", "full_body", "frame_scale", "control_scale",
-              "outpaint_steps", "outpaint_control_scale"):
+              "outpaint_steps", "outpaint_control_scale",
+              "refine_strength"):
         if k in cfg:
             payload[k] = cfg[k]
 

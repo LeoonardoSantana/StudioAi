@@ -259,6 +259,7 @@
             controlScale,
             outpaintSteps,
             outpaintControlScale,
+            refineStrength,
             onSubmitted
         } = params;
 
@@ -322,6 +323,9 @@
         }
         if (Number.isFinite(outpaintControlScale)) {
             payload.outpaint_control_scale = outpaintControlScale;
+        }
+        if (Number.isFinite(refineStrength)) {
+            payload.refine_strength = refineStrength;
         }
 
         if (base64Image) {
