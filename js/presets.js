@@ -848,12 +848,12 @@
         'vid-rip': {
             desc: 'Se rasga la ropa de forma agresiva exponiendo su cuerpo.',
             tips: 'Top, bodysuit o leggings; ropa ajustada funciona mejor.',
-            inputType: 'undress', previewLink: ''
+            inputType: 'undress', previewLink: 'https://drive.google.com/file/d/1_2rXLugbQsLBiFeFqVB_KbSpOF9ixyAd/preview'
         },
         'vid-pulldown': {
             desc: 'Baja su top y pantalón lentamente hasta quedar desnuda.',
             tips: 'Foto con top y pantalón o falda; medio cuerpo o cuerpo completo.',
-            inputType: 'undress', previewLink: ''
+            inputType: 'undress', previewLink: 'https://drive.google.com/file/d/1dgkCTqQJ9EnnvrlP3jJety6P3nmM9DQ5/preview'
         },
         'vid-before-after': {
             desc: 'Transición directa de vestida a desnuda en la misma pose.',
@@ -868,7 +868,7 @@
         'vid-tittydrop-t2v': {
             desc: 'Variante alternativa de levantar la blusa y soltar el pecho.',
             tips: 'Blusa cubriendo el pecho; encuadre de cintura hacia arriba.',
-            inputType: 'undress'
+            inputType: 'undress', previewLink: 'https://drive.google.com/file/d/1x7Rp21I8IOWBnQs4gryV4OTR8_qX3iOI/preview'
         },
         'vid-missionary': {
             desc: 'Sexo en misionero visto en primera persona con vaivén rítmico.',
@@ -888,7 +888,7 @@
         'vid-orgasm': {
             desc: 'Orgasmo intenso con temblor corporal y expresión de éxtasis.',
             tips: 'Funciona mejor con foto desnuda en el acto; con ropa solo simula expresión.',
-            inputType: 'nude'
+            inputType: 'nude', previewLink: 'https://drive.google.com/file/d/1LneGZ9RXRiATFi77z_o8AAyeUk_pl_X6/preview'
         },
         'vid-doggy-front-t2v': {
             desc: 'Variante de doggystyle frontal (entrenado en T2V).',
@@ -903,7 +903,7 @@
         'vid-orgasm-t2v': {
             desc: 'Variante de orgasmo (entrenado en T2V).',
             tips: 'Funciona mejor con foto desnuda en el acto.',
-            inputType: 'nude'
+            inputType: 'nude', previewLink: 'https://drive.google.com/file/d/1SGcxZtJELpwXgL73aenByd_Lw346N0R_/preview'
         },
         'vid-cowgirl': {
             desc: 'Monta encima en posición cowgirl rebotando rítmicamente.',
@@ -918,7 +918,7 @@
         'vid-squirt': {
             desc: 'Eyaculación femenina visible durante el clímax.',
             tips: 'Funciona mejor con foto desnuda masturbándose ya en la escena.',
-            inputType: 'nude', previewLink: ''
+            inputType: 'nude', previewLink: 'https://drive.google.com/file/d/1R-DY8lHl_oDh0W9tqJ8FoEEoD6hx9rUJ/preview'
         },
         'vid-jelly-hips': {
             desc: 'Mueve las caderas de lado a lado con rebote suave de piel.',
@@ -928,7 +928,7 @@
         'vid-fingering': {
             desc: 'Se masturba metiéndose los dedos con expresión de placer.',
             tips: 'Funciona mejor con mano cerca o dentro ya en la foto.',
-            inputType: 'nude'
+            inputType: 'nude', previewLink: 'https://drive.google.com/file/d/1OIzKPuzDFfXE8jcoUVW73B6guGfee2DA/preview'
         },
         'vid-holdup': {
             desc: 'Posición de pie alzada con piernas envueltas.',
@@ -958,7 +958,7 @@
         'vid-solo-fem': {
             desc: 'Se masturba sola moviendo las caderas hasta el clímax.',
             tips: 'Funciona mejor con foto desnuda con la mano en la entrepierna.',
-            inputType: 'nude'
+            inputType: 'nude', previewLink: 'https://drive.google.com/file/d/1TjA48qH_jdeyiU2Kjocc2NAjZDxaS9JD/preview'
         },
         'vid-kissing': {
             desc: 'Beso francés profundo y apasionado.',
@@ -983,12 +983,12 @@
         'vid-squirt-shura': {
             desc: 'Variante alternativa de squirting (estilo shura).',
             tips: 'Funciona mejor con foto desnuda masturbándose ya en la escena.',
-            inputType: 'nude'
+            inputType: 'nude', previewLink: 'https://drive.google.com/file/d/1SAbN6gm3k2MmG-NFoKVtNlq5gHxyLmu1/preview'
         },
         'vid-lactate': {
             desc: 'Presiona sus pechos y los pezones expulsan leche.',
             tips: 'Requiere pecho desnudo visible.',
-            inputType: 'nude'
+            inputType: 'nude', previewLink: 'https://drive.google.com/file/d/11N4dHk6fnLkBJmb0lBu8qU6fAjhHynu9/preview'
         },
         'vid-fmas': {
             desc: 'Se toca analmente con los dedos.',
@@ -1003,7 +1003,7 @@
         'vid-hand-panties': {
             desc: 'Desliza su mano dentro de las bragas para tocarse.',
             tips: 'Requiere bragas visibles con la mano cerca.',
-            inputType: 'nude'
+            inputType: 'nude', previewLink: 'https://drive.google.com/file/d/1fwxZuEfeQp_4RxTPgDbLZs0UG27OTPLr/preview'
         },
         'vid-pov-handjob': {
             desc: 'Masturba un pene con la mano en primera persona.',
@@ -1028,7 +1028,7 @@
         'vid-ahegao': {
             desc: 'Cara de placer extremo: ojos en blanco y lengua fuera.',
             tips: 'Primer plano del rostro.',
-            inputType: 'any'
+            inputType: 'any', previewLink: 'https://drive.google.com/file/d/1hJ7snpemE2m2QDqtap0irIobGpi_v5e6/preview'
         },
         'vid-nipple-suck': {
             desc: 'Una boca chupa y lame su pezón a primer plano.',
@@ -1053,7 +1053,7 @@
         'vid-two-fingers': {
             desc: 'Penetración con dos dedos, detalle húmedo.',
             tips: 'Requiere zona genital visible de cerca.',
-            inputType: 'nude'
+            inputType: 'nude', previewLink: 'https://drive.google.com/file/d/1ThousB8XUvPct9q65F8JCI1g34jXLaXe/preview'
         },
         'vid-erect': {
             desc: 'El pene se va poniendo erecto progresivamente.',
@@ -1063,7 +1063,7 @@
         'vid-genitals': {
             desc: 'Realza el detalle anatómico genital del video.',
             tips: 'Requiere zona genital visible; mejora detalle, no lo inventa.',
-            inputType: 'nude'
+            inputType: 'nude', previewLink: 'https://drive.google.com/file/d/1pfsS4z9691b6g02B8pF7TGoMVe0ylwPt/preview'
         },
         'vid-walk-back': {
             desc: 'Se gira y camina alejándose mostrando su espalda.',
@@ -1073,12 +1073,12 @@
         'vid-dogeza': {
             desc: 'Se arrodilla en una reverencia profunda de sumisión.',
             tips: 'De pie o de rodillas, cuerpo completo.',
-            inputType: 'any'
+            inputType: 'any', previewLink: 'https://drive.google.com/file/d/1LtLnWBw7vNmGaYo6gD40qMxCMlMXsTLs/preview'
         },
         'vid-forward-bends': {
             desc: 'Se inclina al frente repetidamente con rebote del pecho.',
             tips: 'De pie de frente; mejor topless o desnuda.',
-            inputType: 'any'
+            inputType: 'any', previewLink: 'https://drive.google.com/file/d/17GbDuD7PjyaTiynbaW762ADBttUOKRXv/preview'
         },
         'vid-slap': {
             desc: 'Bofetadas suaves en rostro o pecho con reacción.',
@@ -1088,7 +1088,7 @@
         'vid-hand-panties-v3': {
             desc: 'Variante v3 de mano dentro de las bragas.',
             tips: 'Requiere bragas visibles con la mano cerca.',
-            inputType: 'nude'
+            inputType: 'nude', previewLink: 'https://drive.google.com/file/d/1l_E7GPlRXakApMVymDGI6UhQc_i_efJu/preview'
         },
         'vid-kiss-you': {
             desc: 'Se acerca y besa directamente la lente.',
@@ -1103,7 +1103,7 @@
         'vid-innie': {
             desc: 'Primer plano detallado de la vulva.',
             tips: 'Requiere zona genital visible con piernas abiertas.',
-            inputType: 'nude'
+            inputType: 'nude', previewLink: 'https://drive.google.com/file/d/1HumOfRYu4_A0BvO_4wUjq3IbjNjYUZZN/preview'
         },
         'vid-custom': {
             desc: 'Prompt totalmente libre: tú describes la acción y eliges el LoRA.',
