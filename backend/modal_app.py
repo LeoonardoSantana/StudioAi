@@ -1485,7 +1485,8 @@ class ImageEngine:
         prompt = str(payload.get("prompt", "")).strip()
         clean_prompt = (
             prompt
-            + ", same person, same face, same pose, photorealistic skin texture"
+            + ", same person, same face, same pose, "
+            + "photorealistic skin texture"
         )
         negative_prompt = (
             payload.get("negative_prompt") or self._generic_negative_prompt()
@@ -1919,7 +1920,8 @@ class ImageEngine:
                 "same seated upper-body pose, complete full body composition, "
                 "natural breasts, areolae matching her natural lip color, "
                 "bare abdomen and navel, "
-                "bare hips, thighs, knees and legs, subtle natural pubic hair, "
+                "bare hips, thighs, knees and legs, subtle natural "
+                "pubic hair, "
                 "legs continuing naturally downward, same car interior and "
                 "background, seamless continuation, realistic skin texture, "
                 "soft natural lighting, uncensored"
@@ -1943,11 +1945,16 @@ class ImageEngine:
                     for term in blocked_negative_terms
                 )
             )
-            outpaint_prompt = self._fit_prompt_tokens(outpaint_prompt)
-            outpaint_negative = self._fit_prompt_tokens(outpaint_negative)
+            outpaint_prompt = self._fit_prompt_tokens(
+                outpaint_prompt
+            )
+            outpaint_negative = self._fit_prompt_tokens(
+                outpaint_negative
+            )
             print(
                 "Full body outpaint:",
-                f"scale={frame_scale:.2f} frame={scaled_w}x{scaled_h} align_x={frame_align_x:.2f}",
+                f"scale={frame_scale:.2f} frame={scaled_w}x{scaled_h} "
+                f"align_x={frame_align_x:.2f}",
                 f"steps={outpaint_steps} control={outpaint_control}",
             )
             outpainted = inpaint_pipe(
