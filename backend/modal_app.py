@@ -1458,7 +1458,7 @@ class ImageEngine:
     def _generic_negative_prompt():
         return (
             "bad anatomy, extra limbs, extra fingers, missing fingers, "
-            "deformed hands, distorted torso, extra breasts, bad nipples, "
+            "deformed hands, distorted torso, extra breasts, "
             "cut arms, blurry, lowres, worst quality, low quality, watermark"
         )
 
@@ -1908,7 +1908,8 @@ class ImageEngine:
             outpaint_prompt = (
                 "photorealistic fully nude woman, same face identity, "
                 "same seated upper-body pose, complete full body composition, "
-                "bare abdomen and navel, bare hips, thighs, knees and legs, "
+                "full natural breasts, defined areolae, bare abdomen and navel, "
+                "bare hips, thighs, knees and legs, "
                 "legs continuing naturally downward, same car interior and "
                 "background, seamless continuation, realistic skin texture, "
                 "soft natural lighting, uncensored"
@@ -2020,9 +2021,9 @@ class ImageEngine:
             fy1 = int((offset_y + scaled_h) * hr_fsy)
             paste_mask = Image.new("L", (orig_w, orig_h), 0)
             ImageDraw.Draw(paste_mask).rectangle(
-                [fx0 + 8, fy0 + 8, fx1 - 8, fy1 - 8], fill=255
+                [fx0 + 16, fy0 + 16, fx1 - 16, fy1 - 16], fill=255
             )
-            paste_mask = paste_mask.filter(ImageFilter.GaussianBlur(12))
+            paste_mask = paste_mask.filter(ImageFilter.GaussianBlur(20))
 
             final_out = final_work.resize((orig_w, orig_h), Image.LANCZOS)
             final_out.paste(

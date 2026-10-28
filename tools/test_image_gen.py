@@ -19,7 +19,7 @@ OUT_DIR = "/Users/leonardo/Downloads/studioAI/pruebas"
 
 NUDE_NEG = (
     "bad anatomy, extra limbs, extra fingers, missing fingers, deformed hands, "
-    "distorted torso, extra breasts, bad nipples, cut arms, blurry, lowres, "
+    "distorted torso, extra breasts, cut arms, blurry, lowres, "
     "worst quality, low quality, watermark, text, signature, clothing, bra, panties"
 )
 
@@ -126,6 +126,29 @@ TESTS = {
         "blend_mode": "raw", "preserve_limbs": True, "seed": 7,
         "refine_strength": 0.3,
     },
+    # Igual que "abrefine" pero prompt/negative hacia la anatomía de
+    # result.JPG: quita "bad nipples" del negativo (suprime areolas) y
+    # describe senos llenos + piel cálida. Seed 7 para comparar directo.
+    "abtarget": {
+        "prompt": (
+            "photorealistic fully nude woman, same seated pose, same body position "
+            "and camera framing, empty hands resting naturally, completely naked, "
+            "full natural breasts, prominent puffy areolae and nipples, "
+            "bare abdomen and navel, exposed vulva, bare legs and bare feet, "
+            "warm golden skin tone, detailed natural skin texture, "
+            "soft natural lighting, uncensored"
+        ),
+        "negative_prompt": (
+            "bad anatomy, extra limbs, extra fingers, missing fingers, "
+            "deformed hands, distorted torso, extra breasts, cut arms, "
+            "blurry, lowres, worst quality, low quality, watermark, "
+            "text, signature, clothing, bra, panties"
+        ),
+        "mask_target": "all_clothes",
+        "steps": 30, "cfg_scale": 5.0, "denoising_strength": 1.0,
+        "blend_mode": "raw", "preserve_limbs": True, "seed": 7,
+        "refine_strength": 0.3,
+    },
     # Igual que "ab" pero cfg 7 (aísla si el moteado viene del cfg bajo)
     "ab7": {
         "prompt": (
@@ -184,13 +207,17 @@ TESTS = {
         "prompt": (
             "photorealistic fully nude woman, same face identity, same seated pose, "
             "same hand near hair, empty hand, same thin necklace and jewelry, "
-            "completely naked, natural medium breasts, natural nipples and areolae, "
-            "long bare abdomen and navel, bare hips and upper thighs visible, "
-            "natural slim body proportions, realistic skin texture, "
-            "soft natural lighting, uncensored"
+            "completely naked, full natural breasts, prominent puffy areolae "
+            "and nipples, long bare abdomen and navel, bare hips and upper "
+            "thighs visible, natural slim body proportions, warm golden skin "
+            "tone, detailed natural skin texture, soft natural lighting, uncensored"
         ),
-        "negative_prompt": NUDE_NEG + (
-            ", cropped body, cut off torso, missing hips, missing thighs, "
+        "negative_prompt": (
+            "bad anatomy, extra limbs, extra fingers, missing fingers, "
+            "deformed hands, distorted torso, extra breasts, cut arms, "
+            "blurry, lowres, worst quality, low quality, watermark, "
+            "text, signature, clothing, bra, panties, "
+            "cropped body, cut off torso, missing hips, missing thighs, "
             "missing legs, floating body, disconnected legs, extra person, cloned body"
         ),
         "mask_target": "full_body",

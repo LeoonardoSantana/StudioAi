@@ -11,7 +11,7 @@
     const POSE_PRESERVE_NEGATIVE =
         'different pose, changed pose, altered body position, moved arms, moved legs, changed camera angle, zoomed crop, changed framing';
     const ANATOMY_NEGATIVE =
-        'bad anatomy, extra limbs, extra fingers, missing fingers, deformed hands, distorted torso, extra breasts, bad nipples, cut arms, camera, phone, tripod, object in hands, holding object, device, prop, blurry, lowres, worst quality, low quality, watermark, signature';
+        'bad anatomy, extra limbs, extra fingers, missing fingers, deformed hands, distorted torso, extra breasts, cut arms, camera, phone, tripod, object in hands, holding object, device, prop, blurry, lowres, worst quality, low quality, watermark, signature';
     const DEFAULT_NEGATIVE_PROMPT = `${POSE_PRESERVE_NEGATIVE}, ${ANATOMY_NEGATIVE}`;
     const NUDE_NEGATIVE_PROMPT =
         `clothes, clothing, shirt, t-shirt, top, dress, pants, leggings, jeans, shoes, footwear, socks, bra, bikini, underwear, panties, fabric, sleeves, collar, waistband, covered breasts, covered nipples, covered legs, ${POSE_PRESERVE_NEGATIVE}, ${ANATOMY_NEGATIVE}`;
@@ -48,7 +48,7 @@
             badge: 'Lustify Inpaint +18',
             beforeDesc: 'Persona con ropa original',
             afterDesc: 'Quita toda la ropa generando anatomía desnuda explícita sin cambiar cara ni pose',
-            prompt: 'photorealistic fully nude woman, same seated pose, same body position and camera framing, empty hands resting naturally, completely naked, bare breasts, natural nipples and areolae, bare abdomen and navel, exposed vulva, bare legs and bare feet, natural skin texture, soft natural lighting, uncensored',
+            prompt: 'photorealistic fully nude woman, same seated pose, same body position and camera framing, empty hands resting naturally, completely naked, full natural breasts, prominent puffy areolae and nipples, bare abdomen and navel, exposed vulva, bare legs and bare feet, warm golden skin tone, detailed natural skin texture, soft natural lighting, uncensored',
             negativePrompt: NUDE_NEGATIVE_PROMPT,
             steps: 30,
             cfg: 5.0,
@@ -75,7 +75,7 @@
             badge: 'Expand4 + Outpaint',
             beforeDesc: 'Foto recortada o con cuerpo incompleto',
             afterDesc: 'Primero replica el resultado tipo expand4 y luego extiende cadera, muslos y fondo',
-            prompt: 'photorealistic fully nude woman, same face identity, same seated pose, same hand near hair, empty hand, same thin necklace and jewelry, completely naked, natural medium breasts, natural nipples and areolae, long bare abdomen and navel, bare hips and upper thighs visible, natural slim body proportions, realistic skin texture, soft natural lighting, uncensored',
+            prompt: 'photorealistic fully nude woman, same face identity, same seated pose, same hand near hair, empty hand, same thin necklace and jewelry, completely naked, full natural breasts, prominent puffy areolae and nipples, long bare abdomen and navel, bare hips and upper thighs visible, natural slim body proportions, warm golden skin tone, detailed natural skin texture, soft natural lighting, uncensored',
             negativePrompt: `${NUDE_NEGATIVE_PROMPT}, cropped body, cut off torso, missing hips, missing thighs, missing legs, floating body, disconnected legs, extra person, cloned body`,
             steps: 32,
             cfg: 6.0,
