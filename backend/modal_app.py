@@ -947,33 +947,94 @@ class ImageEngine:
                             )
                             p_sh_top = min(float(ls[1]), float(rs[1]))
                             cx = (float(ls[0]) + float(rs[0])) * 0.5
-                            hip_y = min(
-                                h - 24,
-                                max(
-                                    int(h * 0.66),
-                                    int(p_sh_top + sh_dist * 1.10),
-                                ),
-                            )
-                            hip_dx = max(36, int(sh_dist * 0.24))
-                            knee_y = min(
-                                h - 8,
-                                hip_y + max(100, int(sh_dist * 0.45)),
-                            )
-                            knee_dx = max(48, int(sh_dist * 0.38))
-                            inferred = {
-                                11: (cx - hip_dx, hip_y),
-                                12: (cx + hip_dx, hip_y),
-                                13: (cx - knee_dx, knee_y),
-                                14: (cx + knee_dx, knee_y),
-                                15: (
-                                    cx - knee_dx * 0.78,
-                                    min(h - 4, knee_y + sh_dist * 0.18),
-                                ),
-                                16: (
-                                    cx + knee_dx * 0.78,
-                                    min(h - 4, knee_y + sh_dist * 0.18),
-                                ),
-                            }
+                            if kp_ok(11) and kp_ok(12):
+                                # Persona recortada (close-up), no
+                                # pequeña: anclar las piernas en las
+                                # caderas detectadas y repartir el
+                                # espacio extendido del lienzo.
+                                hl, hr = kpts[11], kpts[12]
+                                hip_y = (
+                                    float(hl[1]) + float(hr[1])
+                                ) * 0.5
+                                hip_dx = max(
+                                    36,
+                                    int(
+                                        abs(
+                                            float(hl[0])
+                                            - float(hr[0])
+                                        )
+                                        * 0.5
+                                    ),
+                                )
+                                room = max(80.0, h - hip_y)
+                                knee_y = min(
+                                    h - 8, hip_y + room * 0.45
+                                )
+                                ankle_y = min(
+                                    h - 4, hip_y + room * 0.85
+                                )
+                                inferred = {
+                                    13: (
+                                        float(hl[0]) - hip_dx * 0.5,
+                                        knee_y,
+                                    ),
+                                    14: (
+                                        float(hr[0]) + hip_dx * 0.5,
+                                        knee_y,
+                                    ),
+                                    15: (
+                                        float(hl[0]) - hip_dx * 0.3,
+                                        ankle_y,
+                                    ),
+                                    16: (
+                                        float(hr[0]) + hip_dx * 0.3,
+                                        ankle_y,
+                                    ),
+                                }
+                            else:
+                                # Sin caderas detectadas: anclar en el
+                                # borde inferior del bounding box de la
+                                # persona (donde la foto la recorta) y
+                                # repartir el espacio extendido en
+                                # muslo/espinilla, en vez de escalar
+                                # por hombros (produce piernas
+                                # comprimidas junto al borde).
+                                if person_idx < len(person_box_bounds):
+                                    cut_y = float(
+                                        person_box_bounds[person_idx][3]
+                                    )
+                                else:
+                                    cut_y = min(
+                                        h * 0.74,
+                                        p_sh_top + sh_dist * 1.10,
+                                    )
+                                hip_y = min(
+                                    h - 24,
+                                    max(int(h * 0.55), int(cut_y - 24)),
+                                )
+                                hip_dx = max(36, int(sh_dist * 0.24))
+                                knee_dx = max(48, int(sh_dist * 0.38))
+                                room = max(80.0, h - hip_y)
+                                knee_y = min(
+                                    h - 8, hip_y + room * 0.45
+                                )
+                                ankle_y = min(
+                                    h - 4, hip_y + room * 0.85
+                                )
+                                inferred = {
+                                    11: (cx - hip_dx, hip_y),
+                                    12: (cx + hip_dx, hip_y),
+                                    13: (cx - knee_dx, knee_y),
+                                    14: (cx + knee_dx, knee_y),
+                                    15: (
+                                        cx - knee_dx * 0.78,
+                                        ankle_y,
+                                    ),
+                                    16: (
+                                        cx + knee_dx * 0.78,
+                                        ankle_y,
+                                    ),
+                                }
                             for idx, (x, y) in inferred.items():
                                 kpts[idx] = (x, y)
                                 if conf is not None and idx < len(conf):
@@ -1761,6 +1822,10 @@ class ImageEngine:
             from PIL import ImageDraw, ImageFilter
             debug_first_stage = first_stage
 
+            # Lienzo con la foto reducida al centro: el modelo ve la
+            # figura completa a escala pequeña y extiende a su alrededor
+            # con anatomía coherente (probado vs. el lienzo extendido,
+            # que produce masas de anatomía a escala incorrecta).
             frame_scale = max(
                 0.55,
                 min(0.90, float(payload.get("frame_scale") or 0.80)),
@@ -1894,20 +1959,22 @@ class ImageEngine:
         else:
             final_work = first_stage
 
+        from PIL import ImageFilter
+
+        soft_mask = active_mask.filter(ImageFilter.MaxFilter(5)).filter(
+            ImageFilter.GaussianBlur(8)
+        )
+        soft_mask_hr = soft_mask.resize((orig_w, orig_h), Image.LANCZOS)
+
         if refine_strength > 0:
             # Pase img2img ligero sobre el composite a resolución SDXL:
             # unifica grano, color e iluminación entre la zona generada
             # y la foto original (o el lienzo outpaint en full_body).
-            from PIL import ImageFilter
-
             if full_body:
                 refine_input = final_work
             else:
-                soft_refine = active_mask.filter(
-                    ImageFilter.MaxFilter(5)
-                ).filter(ImageFilter.GaussianBlur(8))
                 refine_input = Image.composite(
-                    final_work, work_img, soft_refine
+                    final_work, work_img, soft_mask
                 )
             refine_gen = None
             if seed is not None:
@@ -1928,17 +1995,44 @@ class ImageEngine:
             )
 
         if full_body:
-            # El lienzo cambió (outpaint): devolver todo lo generado.
+            # El lienzo outpaint contiene la foto reducida en un marco:
+            # extraer la región del marco, mapearla de vuelta a la foto
+            # y componerla sobre la original con la máscara de ropa
+            # (cara/interior pixel-perfect); luego pegarla con bordes
+            # suavizados sobre el fondo ya extendido.
+            from PIL import ImageDraw
+
+            gen_frame = final_work.crop(
+                (
+                    offset_x,
+                    offset_y,
+                    offset_x + scaled_w,
+                    offset_y + scaled_h,
+                )
+            ).resize((orig_w, orig_h), Image.LANCZOS)
+            frame_hr = Image.composite(gen_frame, orig_img, soft_mask_hr)
+
+            hr_fsx = orig_w / sdxl_w
+            hr_fsy = orig_h / sdxl_h
+            fx0 = int(offset_x * hr_fsx)
+            fy0 = int(offset_y * hr_fsy)
+            fx1 = int((offset_x + scaled_w) * hr_fsx)
+            fy1 = int((offset_y + scaled_h) * hr_fsy)
+            paste_mask = Image.new("L", (orig_w, orig_h), 0)
+            ImageDraw.Draw(paste_mask).rectangle(
+                [fx0 + 8, fy0 + 8, fx1 - 8, fy1 - 8], fill=255
+            )
+            paste_mask = paste_mask.filter(ImageFilter.GaussianBlur(12))
+
             final_out = final_work.resize((orig_w, orig_h), Image.LANCZOS)
+            final_out.paste(
+                frame_hr.resize((fx1 - fx0, fy1 - fy0), Image.LANCZOS),
+                (fx0, fy0),
+                paste_mask.crop((fx0, fy0, fx1, fy1)),
+            )
         else:
             # Componer solo la zona editada sobre la base intacta, a
             # resolución original, para no degradar cara/fondo no editados.
-            from PIL import ImageFilter
-
-            soft_mask = active_mask.filter(ImageFilter.MaxFilter(5)).filter(
-                ImageFilter.GaussianBlur(8)
-            )
-            soft_mask_hr = soft_mask.resize((orig_w, orig_h), Image.LANCZOS)
             gen_hr = final_work.resize((orig_w, orig_h), Image.LANCZOS)
             if frame_bounds is not None:
                 # expand_body recompuso el lienzo con la foto reducida:

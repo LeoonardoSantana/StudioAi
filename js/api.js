@@ -260,6 +260,7 @@
             outpaintSteps,
             outpaintControlScale,
             refineStrength,
+            extendRatio,
             onSubmitted
         } = params;
 
@@ -326,6 +327,9 @@
         }
         if (Number.isFinite(refineStrength)) {
             payload.refine_strength = refineStrength;
+        }
+        if (Number.isFinite(extendRatio)) {
+            payload.extend_ratio = extendRatio;
         }
 
         if (base64Image) {

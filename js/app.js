@@ -1535,6 +1535,9 @@
                 refineStrength: state.currentPreset
                     ? state.currentPreset.refineStrength
                     : null,
+                extendRatio: state.currentPreset
+                    ? state.currentPreset.extendRatio
+                    : null,
                 onSubmitted: (callId, mediaType) =>
                     StudioAI.Storage.saveSetting(PENDING_JOB_KEY, {
                         callId,

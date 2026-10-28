@@ -199,6 +199,7 @@ TESTS = {
         "expand_body": True, "full_body": True,
         "frame_scale": 0.62, "control_scale": 1.30,
         "outpaint_steps": 30, "outpaint_control_scale": 1.35,
+        "refine_strength": 0.3,
         "seed": 42,
     },
 }
@@ -259,9 +260,13 @@ def main():
     for k in ("denoising_strength", "blend_mode", "preserve_limbs", "seed",
               "expand_body", "full_body", "frame_scale", "control_scale",
               "outpaint_steps", "outpaint_control_scale",
-              "refine_strength"):
+              "refine_strength", "extend_ratio", "debug"):
         if k in cfg:
             payload[k] = cfg[k]
+    if len(sys.argv) > 3:
+        payload["seed"] = int(sys.argv[3])
+    if len(sys.argv) > 4 and sys.argv[4] == "debug":
+        payload["debug"] = True
 
     print(f"[submit] {name} mask={cfg['mask_target']}")
     t0 = time.time()
@@ -285,9 +290,24 @@ def main():
             if "," in img_b64:
                 img_b64 = img_b64.split(",", 1)[1]
             out = f"{OUT_DIR}/test_{out_name}.png"
-            with open(out, "wb") as f:
-                f.write(base64.b64decode(img_b64))
-            print(f"[saved] {out}")
+            try:
+                dbg = json.loads(img_b64)
+            except (ValueError, TypeError):
+                dbg = None
+            if isinstance(dbg, dict) and "image" in dbg:
+                for key, val in dbg.items():
+                    if not val:
+                        continue
+                    if "," in val:
+                        val = val.split(",", 1)[1]
+                    p = f"{OUT_DIR}/test_{out_name}_{key}.png"
+                    with open(p, "wb") as f:
+                        f.write(base64.b64decode(val))
+                    print(f"[saved] {p}")
+            else:
+                with open(out, "wb") as f:
+                    f.write(base64.b64decode(img_b64))
+                print(f"[saved] {out}")
             break
         if status == "failed":
             print("[failed]", st.get("error"))
