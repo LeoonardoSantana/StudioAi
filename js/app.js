@@ -31,7 +31,6 @@
         isCheckingBilling: false,
         billingCheckPromise: null,
         lastBillingStatus: null,
-        cloudGuideTab: 'modal',
         lastImageGpuWarmAt: 0,
         lastVideoGpuWarmAt: 0
     };
@@ -319,52 +318,18 @@
         }
     }
 
-    async function copyKaggleScript() {
-        const codeId = state.cloudGuideTab === 'kaggle' ? 'kaggleSilentCode' : 'modalDeployCode';
-        const btnId = state.cloudGuideTab === 'kaggle' ? 'copyKaggleBtn' : 'copyModalBtn';
-        const codeEl = document.getElementById(codeId);
+    async function copyDeployCommands() {
+        const codeEl = document.getElementById('modalDeployCode');
         if (!codeEl) return;
 
         await copyTextToClipboard(codeEl.innerText);
-        const btn = document.getElementById(btnId);
+        const btn = document.getElementById('copyModalBtn');
         if (btn) {
             const originalText = btn.dataset.label || 'Copiar Comandos';
             btn.textContent = '✅ ¡Copiado!';
             setTimeout(() => {
                 btn.textContent = originalText;
             }, 2000);
-        }
-    }
-
-    function switchCloudTab(tab) {
-        state.cloudGuideTab = tab;
-        const tabModalBtn = document.getElementById('tabGuideModal');
-        const tabKaggleBtn = document.getElementById('tabGuideKaggle');
-        const panelModal = document.getElementById('panelGuideModal');
-        const panelKaggle = document.getElementById('panelGuideKaggle');
-
-        if (tab === 'kaggle') {
-            if (tabKaggleBtn) {
-                tabKaggleBtn.className =
-                    'px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold transition';
-            }
-            if (tabModalBtn) {
-                tabModalBtn.className =
-                    'px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white text-xs font-medium transition';
-            }
-            if (panelKaggle) panelKaggle.classList.remove('hidden');
-            if (panelModal) panelModal.classList.add('hidden');
-        } else {
-            if (tabModalBtn) {
-                tabModalBtn.className =
-                    'px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold transition';
-            }
-            if (tabKaggleBtn) {
-                tabKaggleBtn.className =
-                    'px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white text-xs font-medium transition';
-            }
-            if (panelModal) panelModal.classList.remove('hidden');
-            if (panelKaggle) panelKaggle.classList.add('hidden');
         }
     }
 
@@ -1244,8 +1209,8 @@
         }
     }
 
-    function toggleKaggleModal() {
-        const modal = document.getElementById('kaggleModal');
+    function toggleSettingsModal() {
+        const modal = document.getElementById('settingsModal');
         if (modal) {
             modal.classList.toggle('hidden');
         }
@@ -1692,7 +1657,7 @@
     function bindKeyboardShortcuts() {
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                const modal = document.getElementById('kaggleModal');
+                const modal = document.getElementById('settingsModal');
                 if (modal && !modal.classList.contains('hidden')) {
                     modal.classList.add('hidden');
                 }
@@ -1729,8 +1694,7 @@
     Object.assign(global, {
         saveApiUrlSetting,
         checkServerStatus,
-        toggleKaggleModal,
-        switchCloudTab,
+        toggleSettingsModal,
         setMainCategory,
         previewUpload,
         previewFaceReference,
@@ -1752,7 +1716,7 @@
         selectPreset,
         connectLocalProjectFolder,
         clearAllHistory,
-        copyKaggleScript,
+        copyDeployCommands,
         copyShareableUrl,
         previewFromVault,
         downloadFromVault,

@@ -62,7 +62,7 @@ body {
     padding-bottom: env(safe-area-inset-bottom);
 }
 
-#kaggleModal {
+#settingsModal {
     padding-top: max(0.75rem, env(safe-area-inset-top));
     padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
 }

@@ -42,7 +42,7 @@
                 </div>
             </div>
 
-            <!-- Estado del Servidor GPU Serverless (Modal.com / Kaggle) -->
+            <!-- Estado del Servidor GPU Serverless (Modal.com) -->
             <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
                 <div class="hidden md:flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5">
                     <span id="serverDot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
@@ -57,7 +57,7 @@
                 <span id="creditBalanceBadge" onclick="checkServerStatus()" title="Consultar créditos de Modal" class="text-[10px] px-2 py-1 rounded-full border font-bold whitespace-nowrap cursor-pointer transition bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700">
                     Créditos: --
                 </span>
-                <button type="button" onclick="toggleKaggleModal()" aria-label="Configurar servidor Modal" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 sm:px-3.5 py-2 rounded-xl font-semibold transition flex items-center gap-1.5 shadow-sm">
+                <button type="button" onclick="toggleSettingsModal()" aria-label="Configurar servidor Modal" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 sm:px-3.5 py-2 rounded-xl font-semibold transition flex items-center gap-1.5 shadow-sm">
                     <span class="sm:hidden">⚙️</span>
                     <span class="hidden sm:inline">⚡ Configurar Modal</span>
                 </button>
@@ -527,90 +527,36 @@
         </section>
     </main>
 
-    <!-- Modal Guía Serverless Modal.com ($30/mes Gratis) + Kaggle Modo Silencioso -->
-    <div id="kaggleModal" onclick="if (event.target === this) toggleKaggleModal()" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <!-- Ventana de configuración del servidor Modal.com -->
+    <div id="settingsModal" onclick="if (event.target === this) toggleSettingsModal()" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
         <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-4 sm:p-5 shadow-2xl flex flex-col gap-4 my-auto max-h-[90vh] max-h-[90dvh] overflow-y-auto overscroll-contain">
             <div class="flex items-center justify-between border-b border-slate-800 pb-3">
                 <div class="flex items-center gap-2">
                     <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold text-xs">SERVERLESS GPU</span>
-                    <h3 id="modalTitle" class="text-sm sm:text-base font-bold text-white">Conexión Serverless: Modal.com ($30/mes Gratis) o Kaggle Silencioso</h3>
+                    <h3 id="modalTitle" class="text-sm sm:text-base font-bold text-white">Conexión con Modal.com</h3>
                 </div>
-                <button type="button" onclick="toggleKaggleModal()" class="text-slate-400 hover:text-white text-lg font-bold px-2" aria-label="Cerrar ventana">✕</button>
-            </div>
-
-            <!-- Pestañas Modal.com vs Kaggle Silencioso -->
-            <div class="flex flex-col sm:flex-row gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
-                <button type="button" id="tabGuideModal" onclick="switchCloudTab('modal')" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold transition">
-                    🚀 Opción 1: Modal.com (Recomendado - URL Fija 24/7)
-                </button>
-                <button type="button" id="tabGuideKaggle" onclick="switchCloudTab('kaggle')" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white text-xs font-medium transition">
-                    🔇 Opción 2: Kaggle Modo Silencioso (0% RAM)
-                </button>
+                <button type="button" onclick="toggleSettingsModal()" class="text-slate-400 hover:text-white text-lg font-bold px-2" aria-label="Cerrar ventana">✕</button>
             </div>
 
             <div class="text-xs text-slate-300 space-y-3">
-                <!-- PANEL 1: MODAL.COM SERVERLESS -->
-                <div id="panelGuideModal" class="space-y-3">
-                    <div class="bg-indigo-950/50 border border-indigo-700/70 rounded-xl p-3.5 space-y-1.5">
-                        <strong class="text-indigo-300 text-xs sm:text-sm block">✨ Ya incluimos el archivo <code>backend/modal_app.py</code> en tu proyecto</strong>
-                        <p class="text-[11px] text-slate-300 leading-relaxed">
-                            Configura automáticamente <strong>Lustify! SDXL v2.0 (+18 / Inpainting)</strong> + <strong>Wan 2.1 I2V 480P</strong> + <strong>LoRAs ligeros</strong> en una sola URL permanente. Solo despierta la GPU cuando pulsas <em>Generar</em> y se apaga sola a $0.00 al terminar.
-                        </p>
-                    </div>
-
-                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2">
-                        <div class="flex flex-wrap justify-between items-center gap-2">
-                            <strong class="text-purple-400">Ejecuta estos 3 comandos una sola vez en tu terminal:</strong>
-                            <button type="button" onclick="copyKaggleScript()" id="copyModalBtn" data-label="Copiar Comandos Modal" class="text-[11px] bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-1 rounded-lg font-medium transition">Copiar Comandos Modal</button>
-                        </div>
-                        <pre id="modalDeployCode" class="bg-slate-900 p-2.5 rounded-lg text-[11px] font-mono text-emerald-300 overflow-x-auto border border-slate-800">pip install modal
-modal setup
-modal deploy backend/modal_app.py</pre>
-                        <p class="text-[10px] text-slate-400">
-                            Al terminar, la terminal te mostrará tu enlace fijo terminado en <code>.modal.run</code>. Pégalo aquí abajo y quedará guardado para siempre.
-                        </p>
-                    </div>
+                <div class="bg-indigo-950/50 border border-indigo-700/70 rounded-xl p-3.5 space-y-1.5">
+                    <strong class="text-indigo-300 text-xs sm:text-sm block">✨ Ya incluimos el archivo <code>backend/modal_app.py</code> en tu proyecto</strong>
+                    <p class="text-[11px] text-slate-300 leading-relaxed">
+                        Configura automáticamente <strong>Lustify! SDXL v2.0 (+18 / Inpainting)</strong> + <strong>Wan 2.1 I2V 480P</strong> + <strong>LoRAs ligeros</strong> en una sola URL permanente. Solo despierta la GPU cuando pulsas <em>Generar</em> y se apaga sola a $0.00 al terminar.
+                    </p>
                 </div>
 
-                <!-- PANEL 2: KAGGLE MODO SILENCIOSO (0% RAM) -->
-                <div id="panelGuideKaggle" class="hidden space-y-3">
-                    <div class="bg-emerald-950/30 border border-emerald-700/50 rounded-xl p-3 space-y-1">
-                        <strong class="text-emerald-300 text-xs block">🔇 Solución al consumo de RAM en Kaggle</strong>
-                        <p class="text-[11px] text-slate-300">
-                            Este script descarga <strong>Lustify! SDXL + LoRA</strong> en modo silencioso y redirige todos los logs a archivos internos para que tu navegador nunca más se congele.
-                        </p>
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2">
+                    <div class="flex flex-wrap justify-between items-center gap-2">
+                        <strong class="text-purple-400">Ejecuta estos 3 comandos una sola vez en tu terminal:</strong>
+                        <button type="button" onclick="copyDeployCommands()" id="copyModalBtn" data-label="Copiar Comandos Modal" class="text-[11px] bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-1 rounded-lg font-medium transition">Copiar Comandos Modal</button>
                     </div>
-                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2">
-                        <div class="flex flex-wrap justify-between items-center gap-2">
-                            <strong class="text-purple-400">Script Kaggle Modo Silencioso (Lustify! SDXL + LoRA):</strong>
-                            <button type="button" onclick="copyKaggleScript()" id="copyKaggleBtn" data-label="Copiar Script Silencioso" class="text-[11px] bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-1 rounded-lg font-medium transition">Copiar Script Silencioso</button>
-                        </div>
-                        <pre id="kaggleSilentCode" class="bg-slate-900 p-2.5 rounded-lg text-[10px] font-mono text-emerald-300 overflow-x-auto border border-slate-800">import subprocess, time, re, requests
-from IPython.display import clear_output
-
-!git clone --depth 1 -q https://github.com/lllyasviel/stable-diffusion-webui-forge.git /kaggle/working/forge
-!mkdir -p /kaggle/working/forge/models/Stable-diffusion /kaggle/working/forge/models/Lora
-!wget -q -nc -O /kaggle/working/forge/models/Stable-diffusion/lustifySDXL.safetensors https://huggingface.co/TheImposterImposters/LUSTIFY-v2.0/resolve/main/lustifySDXLNSFWSFW_v20.safetensors
-!wget -q -nc -O /kaggle/working/forge/models/Lora/add-detail-xl.safetensors https://huggingface.co/LyliaEngine/add-detail-xl/resolve/main/add-detail-xl.safetensors
-!wget -q -nc https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O /kaggle/working/cloudflared
-!chmod +x /kaggle/working/cloudflared
-
-t_log = open('/kaggle/working/tunnel.log', 'w')
-w_log = open('/kaggle/working/webui.log', 'w')
-subprocess.Popen(['/kaggle/working/cloudflared', 'tunnel', '--url', 'http://127.0.0.1:7860'], stdout=t_log, stderr=t_log)
-srv = subprocess.Popen(['python', 'launch.py', '--api', '--listen', '--cors-allow-origins=*'], cwd='/kaggle/working/forge', stdout=w_log, stderr=w_log)
-
-url = None
-while not url:
-    time.sleep(2)
-    with open('/kaggle/working/tunnel.log') as f:
-        m = re.search(r'https://[-a-z0-9.]*\.trycloudflare\.com', f.read())
-        if m: url = m.group(0)
-
-clear_output()
-print(f"URL LISTA (0% RAM): {url}")
-srv.wait()</pre>
-                    </div>
+                    <pre id="modalDeployCode" class="bg-slate-900 p-2.5 rounded-lg text-[11px] font-mono text-emerald-300 overflow-x-auto border border-slate-800">pip install modal
+modal setup
+modal deploy backend/modal_app.py</pre>
+                    <p class="text-[10px] text-slate-400">
+                        Al terminar, la terminal te mostrará tu enlace fijo terminado en <code>.modal.run</code>. Pégalo aquí abajo y quedará guardado para siempre.
+                    </p>
                 </div>
 
                 <!-- Enlace del servidor + Preparación para GitHub Pages -->
@@ -638,7 +584,7 @@ srv.wait()</pre>
             </div>
 
             <div class="flex justify-end pt-2 border-t border-slate-800">
-                <button type="button" onclick="toggleKaggleModal()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition">Listo, Guardar y Cerrar</button>
+                <button type="button" onclick="toggleSettingsModal()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition">Listo, Guardar y Cerrar</button>
             </div>
         </div>
     </div>
