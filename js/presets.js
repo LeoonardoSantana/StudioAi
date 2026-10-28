@@ -818,32 +818,32 @@
         'vid-breathing': {
             desc: 'Se quita la parte de arriba y queda en topless frente a cámara.',
             tips: 'Foto con top o camiseta puesta, medio cuerpo, mirando a cámara.',
-            inputType: 'undress', previewLink: ''
+            inputType: 'undress', previewLink: 'https://drive.google.com/file/d/12-17DT9Lh2fIDT997z1vr9WasInzCx98/preview'
         },
         'vid-camera': {
             desc: 'Sube la blusa y deja caer el pecho con rebote físico realista.',
             tips: 'Blusa o sostén cubriendo el pecho; encuadre de cintura hacia arriba.',
-            inputType: 'undress', previewLink: ''
+            inputType: 'undress', previewLink: 'https://drive.google.com/file/d/1yLJldcCBDzOF6wB2VNpn1vkR24zcT56A/preview'
         },
         'vid-turn': {
             desc: 'Cubre la lente con la mano y al quitarla aparece completamente desnuda.',
             tips: 'Cuerpo completo o medio cuerpo; funciona con cualquier ropa.',
-            inputType: 'undress', previewLink: ''
+            inputType: 'undress', previewLink: 'https://drive.google.com/file/d/1VxLPd5en9zdOhDpFoApX05sRqbqr1Ci8/preview'
         },
         'vid-wind': {
             desc: 'Balanceo sensual del cuerpo con rebote natural del pecho.',
             tips: 'Necesita foto ya desnuda o con lencería mínima; no quita ropa.',
-            inputType: 'nude', previewLink: ''
+            inputType: 'nude', previewLink: 'https://drive.google.com/file/d/1ScJIdFbMB0HCz04CLhMy_Ei92di1Dq-A/preview'
         },
         'vid-loop': {
             desc: 'Se agarra y aprieta el pecho con sus propias manos.',
             tips: 'Pecho visible (topless o desnuda), medio cuerpo.',
-            inputType: 'nude', previewLink: ''
+            inputType: 'nude', previewLink: 'https://drive.google.com/file/d/1_d2Y0kZ-8x5PiwmJqrnV3-ET5iOarIHD/preview'
         },
         'vid-outfit-change': {
             desc: 'Cambia de golpe su outfit por lencería sexy a mitad del video.',
             tips: 'Cualquier ropa; cuerpo completo da el mejor efecto.',
-            inputType: 'undress', previewLink: ''
+            inputType: 'undress', previewLink: 'https://drive.google.com/file/d/1r7370D894Xxaeziv2C9-BCf72aEZBiKx/preview'
         },
         'vid-rip': {
             desc: 'Se rasga la ropa de forma agresiva exponiendo su cuerpo.',
@@ -858,12 +858,12 @@
         'vid-before-after': {
             desc: 'Transición directa de vestida a desnuda en la misma pose.',
             tips: 'Pose clara de cuerpo completo con fondo simple.',
-            inputType: 'undress', previewLink: ''
+            inputType: 'undress', previewLink: 'https://drive.google.com/file/d/1HSBRGtqyTQEOfRHgtPipH48Qsn-Xw2w2/preview'
         },
         'vid-undress': {
             desc: 'Se desviste pieza por pieza hasta quedar completamente nude.',
             tips: 'Mejor con varias prendas puestas; distancia media.',
-            inputType: 'undress', previewLink: ''
+            inputType: 'undress', previewLink: 'https://drive.google.com/file/d/1WEdKobbjFJie7GLeZmBcRLcdtCXEWtQp/preview'
         },
         'vid-tittydrop-t2v': {
             desc: 'Variante alternativa de levantar la blusa y soltar el pecho.',
@@ -908,7 +908,7 @@
         'vid-cowgirl': {
             desc: 'Monta encima en posición cowgirl rebotando rítmicamente.',
             tips: 'Foto sentada o agachada de frente sugiriendo posición encima.',
-            inputType: 'nude', previewLink: ''
+            inputType: 'nude', previewLink: 'https://drive.google.com/file/d/1UW5Mgou0dNG8aSwTxb2iyjL8mpybik-4/preview'
         },
         'vid-pov-missionary': {
             desc: 'Misionero POV de la colección kimjob con embestidas profundas.',
@@ -923,7 +923,7 @@
         'vid-jelly-hips': {
             desc: 'Mueve las caderas de lado a lado con rebote suave de piel.',
             tips: 'De pie, cuerpo completo; funciona con ropa pero mejor desnuda.',
-            inputType: 'any', previewLink: ''
+            inputType: 'any', previewLink: 'https://drive.google.com/file/d/1l829rcMXhRveZJ9pVdYBzytmTcdZX8T7/preview'
         },
         'vid-fingering': {
             desc: 'Se masturba metiéndose los dedos con expresión de placer.',
@@ -1068,7 +1068,7 @@
         'vid-walk-back': {
             desc: 'Se gira y camina alejándose mostrando su espalda.',
             tips: 'De pie con espacio para caminar; funciona con ropa.',
-            inputType: 'any', previewLink: ''
+            inputType: 'any', previewLink: 'https://drive.google.com/file/d/1jyorzCWg6rSTPMBNKtOjRFQRl2MuwMMg/preview'
         },
         'vid-dogeza': {
             desc: 'Se arrodilla en una reverencia profunda de sumisión.',
@@ -1093,7 +1093,7 @@
         'vid-kiss-you': {
             desc: 'Se acerca y besa directamente la lente.',
             tips: 'Rostro cerca de la cámara, bien enfocado.',
-            inputType: 'any', previewLink: ''
+            inputType: 'any', previewLink: 'https://drive.google.com/file/d/1eez-pa7pAPQYyhCd5iV5MtBuAlPpAKs-/preview'
         },
         'vid-dreamjob': {
             desc: 'Felación suave con contacto visual al espectador.',
