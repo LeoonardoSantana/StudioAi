@@ -1384,6 +1384,22 @@ class ImageEngine:
             "cut arms, blurry, lowres, worst quality, low quality, watermark"
         )
 
+    def _fit_prompt_tokens(self, text, max_tokens=75):
+        """Recorta términos separados por coma desde el final hasta que el texto quepa en el límite de CLIP."""
+        tokenizer = self.inpaint.tokenizer
+        parts = [p.strip() for p in str(text or "").split(",") if p.strip()]
+        while parts:
+            candidate = ", ".join(parts)
+            n = len(tokenizer(candidate, truncation=False)["input_ids"])
+            if n <= max_tokens + 2:  # +2 por BOS/EOS
+                return candidate
+            parts.pop()
+        return ""
+
+    def _count_prompt_tokens(self, text):
+        tokenizer = self.inpaint.tokenizer
+        return len(tokenizer(str(text or ""), truncation=False)["input_ids"])
+
     @modal.method()
     def generate(self, payload: dict) -> str:
         from PIL import Image
@@ -1391,12 +1407,20 @@ class ImageEngine:
         prompt = str(payload.get("prompt", "")).strip()
         clean_prompt = (
             prompt
-            + ", same person, same face, same hairstyle, same pose, "
-            + "same skin tone as the visible face and arms, photorealistic, "
-            + "natural skin texture, coherent anatomy"
+            + ", same person, same face, same pose, photorealistic skin texture"
         )
         negative_prompt = (
             payload.get("negative_prompt") or self._generic_negative_prompt()
+        )
+        before_p = self._count_prompt_tokens(clean_prompt)
+        before_n = self._count_prompt_tokens(negative_prompt)
+        clean_prompt = self._fit_prompt_tokens(clean_prompt)
+        negative_prompt = self._fit_prompt_tokens(negative_prompt)
+        after_p = self._count_prompt_tokens(clean_prompt)
+        after_n = self._count_prompt_tokens(negative_prompt)
+        print(
+            "Prompt tokens:", before_p, "->", after_p,
+            "| negative:", before_n, "->", after_n,
         )
         steps = max(20, min(42, int(payload.get("steps") or 30)))
         cfg_scale = max(3.0, min(7.0, float(payload.get("cfg_scale") or 5.0)))
@@ -1822,6 +1846,8 @@ class ImageEngine:
                     for term in blocked_negative_terms
                 )
             )
+            outpaint_prompt = self._fit_prompt_tokens(outpaint_prompt)
+            outpaint_negative = self._fit_prompt_tokens(outpaint_negative)
             print(
                 "Full body outpaint:",
                 f"scale={frame_scale:.2f} frame={scaled_w}x{scaled_h}",
@@ -1847,7 +1873,46 @@ class ImageEngine:
         else:
             final_work = first_stage
 
-        final_out = final_work.resize((orig_w, orig_h), Image.LANCZOS)
+        if full_body:
+            # El lienzo cambió (outpaint): devolver todo lo generado.
+            final_out = final_work.resize((orig_w, orig_h), Image.LANCZOS)
+        else:
+            # Componer solo la zona editada sobre la base intacta, a
+            # resolución original, para no degradar cara/fondo no editados.
+            from PIL import ImageFilter
+
+            soft_mask = active_mask.filter(ImageFilter.MaxFilter(5)).filter(
+                ImageFilter.GaussianBlur(8)
+            )
+            soft_mask_hr = soft_mask.resize((orig_w, orig_h), Image.LANCZOS)
+            gen_hr = final_work.resize((orig_w, orig_h), Image.LANCZOS)
+            if frame_bounds is not None:
+                # expand_body recompuso el lienzo con la foto reducida:
+                # reconstruir ese mismo lienzo a resolución original para
+                # que el composite quede alineado con la geometría generada.
+                hr_fs = frame_scale
+                hr_fw = max(1, int(orig_w * hr_fs))
+                hr_fh = max(1, int(orig_h * hr_fs))
+                hr_ox = (orig_w - hr_fw) // 2
+                hr_oy = max(0, int(orig_h * 0.02))
+                hr_blur = max(8, int(36 * orig_w / sdxl_w))
+                base_hr = orig_img.filter(
+                    ImageFilter.GaussianBlur(hr_blur)
+                )
+                base_hr.paste(
+                    orig_img.resize((hr_fw, hr_fh), Image.LANCZOS),
+                    (hr_ox, hr_oy),
+                )
+            else:
+                base_hr = orig_img
+            final_out = Image.composite(gen_hr, base_hr, soft_mask_hr)
+            print(
+                "Final composite:",
+                f"orig={orig_w}x{orig_h}",
+                f"sdxl={sdxl_w}x{sdxl_h}",
+                "mode=hr_composite",
+                f"canvas={frame_bounds is not None}",
+            )
 
         if payload.get("debug"):
             import json

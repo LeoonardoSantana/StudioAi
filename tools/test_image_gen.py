@@ -96,6 +96,35 @@ TESTS = {
         "steps": 30, "cfg_scale": 7.0, "denoising_strength": 1.0,
         "blend_mode": "raw", "preserve_limbs": True, "seed": 7,
     },
+    # A/B: replica exacta del preset img-realism de la app con seed fija.
+    # Uso: python3 tools/test_image_gen.py ab <sufijo>  -> pruebas/test_ab_<sufijo>.png
+    "ab": {
+        "prompt": (
+            "photorealistic fully nude woman, same seated pose, same body position "
+            "and camera framing, empty hands resting naturally, completely naked, "
+            "bare breasts, natural nipples and areolae, bare abdomen and navel, "
+            "exposed vulva, bare legs and bare feet, natural skin texture, "
+            "soft natural lighting, uncensored"
+        ),
+        "negative_prompt": NUDE_NEG,
+        "mask_target": "all_clothes",
+        "steps": 30, "cfg_scale": 5.0, "denoising_strength": 1.0,
+        "blend_mode": "raw", "preserve_limbs": True, "seed": 7,
+    },
+    # Igual que "ab" pero cfg 7 (aísla si el moteado viene del cfg bajo)
+    "ab7": {
+        "prompt": (
+            "photorealistic fully nude woman, same seated pose, same body position "
+            "and camera framing, empty hands resting naturally, completely naked, "
+            "bare breasts, natural nipples and areolae, bare abdomen and navel, "
+            "exposed vulva, bare legs and bare feet, natural skin texture, "
+            "soft natural lighting, uncensored"
+        ),
+        "negative_prompt": NUDE_NEG,
+        "mask_target": "all_clothes",
+        "steps": 30, "cfg_scale": 7.0, "denoising_strength": 1.0,
+        "blend_mode": "raw", "preserve_limbs": True, "seed": 7,
+    },
     # Solo topless (mask_target upper_clothes si existe; si no, all_clothes)
     "topless": {
         "prompt": (
@@ -191,6 +220,7 @@ def main():
     if name not in TESTS:
         print("Tests:", ", ".join(TESTS))
         sys.exit(1)
+    out_name = f"{name}_{sys.argv[2]}" if len(sys.argv) > 2 else name
 
     b = billing()
     print(f"[billing] remaining=${b.get('remaining_usd')}")
@@ -238,7 +268,7 @@ def main():
             img_b64 = imgs[0] if imgs else ""
             if "," in img_b64:
                 img_b64 = img_b64.split(",", 1)[1]
-            out = f"{OUT_DIR}/test_urpm_{name}.png"
+            out = f"{OUT_DIR}/test_{out_name}.png"
             with open(out, "wb") as f:
                 f.write(base64.b64decode(img_b64))
             print(f"[saved] {out}")
