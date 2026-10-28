@@ -211,27 +211,8 @@
         canvas.classList.remove('hidden');
         setVideoPauseEnabled(false);
 
-        const previewBase =
-            preset &&
-            preset.videoPreviews &&
-            (preset.videoPreviews[durationSeconds] ||
-                preset.videoPreviews.default);
-        const sources = normalizeReferenceSources(previewBase);
-        if (sources.length === 0) return;
-
-        let sourceIndex = 0;
-        const tryNextSource = () => {
-            if (token !== videoPreviewToken) return;
-            if (sourceIndex >= sources.length) {
-                previewEl.classList.add('hidden');
-                canvas.classList.remove('hidden');
-                videoPreviewActive = false;
-                setVideoPauseEnabled(false);
-                return;
-            }
-            previewEl.src = sources[sourceIndex];
-            sourceIndex += 1;
-        };
+        const link = preset && preset.previewLink;
+        if (!link) return;
 
         previewEl.onload = function () {
             if (token !== videoPreviewToken) return;
@@ -240,8 +221,7 @@
             canvas.classList.add('hidden');
             setVideoPauseEnabled(false);
         };
-        previewEl.onerror = tryNextSource;
-        tryNextSource();
+        previewEl.src = link;
     }
 
     function stopVideoDemoCanvas() {
