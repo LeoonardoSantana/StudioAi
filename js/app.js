@@ -602,7 +602,7 @@
 
         const VIDEO_GROUPS = [
             ['undress', '🔓 ACEPTA ROPA — el video genera el desnudo'],
-            ['nude', '🔥 NECESITA NUDE/ACCIÓN — solo añade movimiento'],
+            ['nude', '🔥 NECESITA NUDE/ACCIÓN — la foto ya debe mostrar la pose o la pareja'],
             ['any', '✨ FUNCIONA CON CUALQUIER FOTO']
         ];
         if (state.currentFilter === 'video') {

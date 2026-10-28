@@ -872,52 +872,52 @@
         },
         'vid-missionary': {
             desc: 'Sexo en misionero visto en primera persona con vaivén rítmico.',
-            tips: 'Foto acostada o reclinada con piernas abiertas visibles.',
+            tips: 'Requiere foto acostada con piernas abiertas y, idealmente, pareja encima; el modelo no inventa personas.',
             inputType: 'nude'
         },
         'vid-doggypov': {
             desc: 'Sexo por detrás en primera persona con vaivén de caderas.',
-            tips: 'Foto de espaldas o en cuatro; nalgas visibles.',
+            tips: 'Requiere foto de espaldas o en cuatro, idealmente con pareja detrás.',
             inputType: 'nude'
         },
         'vid-front-doggy': {
             desc: 'Vaivén en posición de cuatro visto desde el frente.',
-            tips: 'Foto en cuatro de frente con el pecho colgando visible.',
+            tips: 'Requiere foto en cuatro de frente; sin esa pose solo anima movimiento leve.',
             inputType: 'nude'
         },
         'vid-orgasm': {
             desc: 'Orgasmo intenso con temblor corporal y expresión de éxtasis.',
-            tips: 'Rostro y torso visibles; funciona con casi cualquier pose.',
+            tips: 'Funciona mejor con foto desnuda en el acto; con ropa solo simula expresión.',
             inputType: 'nude'
         },
         'vid-doggy-front-t2v': {
             desc: 'Variante de doggystyle frontal (entrenado en T2V).',
-            tips: 'Foto en cuatro de frente; resultados pueden variar en I2V.',
+            tips: 'Requiere la pose en cuatro ya visible en la foto.',
             inputType: 'nude'
         },
         'vid-missionary-t2v': {
             desc: 'Variante de misionero (entrenado en T2V).',
-            tips: 'Acostada con piernas abiertas; puede variar en I2V.',
+            tips: 'Requiere la pose de misionero ya en la foto.',
             inputType: 'nude'
         },
         'vid-orgasm-t2v': {
             desc: 'Variante de orgasmo (entrenado en T2V).',
-            tips: 'Rostro visible; puede variar en I2V.',
+            tips: 'Funciona mejor con foto desnuda en el acto.',
             inputType: 'nude'
         },
         'vid-cowgirl': {
             desc: 'Monta encima en posición cowgirl rebotando rítmicamente.',
-            tips: 'Foto sentada o agachada de frente sugiriendo posición encima.',
+            tips: 'Requiere foto donde ella ya esté encima de alguien o sentada en posición de montar; sin pareja visible solo hará movimiento genérico.',
             inputType: 'nude', previewLink: 'https://drive.google.com/file/d/1UW5Mgou0dNG8aSwTxb2iyjL8mpybik-4/preview'
         },
         'vid-pov-missionary': {
             desc: 'Misionero POV de la colección kimjob con embestidas profundas.',
-            tips: 'Acostada con piernas abiertas, vista frontal.',
+            tips: 'Igual que misionero: necesita la pose acostada con piernas abiertas ya en la foto.',
             inputType: 'nude'
         },
         'vid-squirt': {
             desc: 'Eyaculación femenina visible durante el clímax.',
-            tips: 'Foto desnuda con piernas abiertas o masturbándose.',
+            tips: 'Funciona mejor con foto desnuda masturbándose ya en la escena.',
             inputType: 'nude', previewLink: ''
         },
         'vid-jelly-hips': {
@@ -927,102 +927,102 @@
         },
         'vid-fingering': {
             desc: 'Se masturba metiéndose los dedos con expresión de placer.',
-            tips: 'Desnuda o con la mano cerca de la entrepierna.',
+            tips: 'Funciona mejor con mano cerca o dentro ya en la foto.',
             inputType: 'nude'
         },
         'vid-holdup': {
             desc: 'Posición de pie alzada con piernas envueltas.',
-            tips: 'Cuerpo completo; mejor con pareja o pose que lo sugiera.',
+            tips: 'Requiere foto con pareja o posición alzada ya sugerida.',
             inputType: 'nude'
         },
         'vid-anal': {
             desc: 'Inserción anal lenta y progresiva.',
-            tips: 'De espaldas inclinada, nalgas visibles.',
+            tips: 'Requiere foto de espaldas inclinada con nalgas visibles, idealmente con pareja.',
             inputType: 'nude'
         },
         'vid-pov-insertion': {
             desc: 'Penetración lenta en primera persona a primer plano.',
-            tips: 'Zona pélvica visible y cercana a cámara.',
+            tips: 'Requiere la zona pélvica a primer plano ya visible.',
             inputType: 'nude'
         },
         'vid-flaccid': {
             desc: 'El pene pasa de flácido a completamente erecto.',
-            tips: 'Necesita el pene visible en la foto.',
+            tips: 'Requiere pene visible.',
             inputType: 'nude'
         },
         'vid-cumshot': {
             desc: 'Finaliza con eyaculación visible sobre el cuerpo o rostro.',
-            tips: 'Foto del acto en curso o del objetivo a primer plano.',
+            tips: 'Requiere el acto en curso o el objetivo visible en la foto.',
             inputType: 'nude'
         },
         'vid-solo-fem': {
             desc: 'Se masturba sola moviendo las caderas hasta el clímax.',
-            tips: 'Desnuda reclinada o sentada con piernas abiertas.',
+            tips: 'Funciona mejor con foto desnuda con la mano en la entrepierna.',
             inputType: 'nude'
         },
         'vid-kissing': {
             desc: 'Beso francés profundo y apasionado.',
-            tips: 'Ideal con foto de pareja; rostros cercanos y visibles.',
+            tips: 'Requiere dos personas/rostro cercanos ya en la foto.',
             inputType: 'any'
         },
         'vid-spanking': {
             desc: 'Nalgadas repetidas con rebote de piel en cada golpe.',
-            tips: 'Espalda o nalgas visibles, mejor desnuda.',
+            tips: 'Requiere nalgas visibles, mejor desnudas.',
             inputType: 'nude'
         },
         'vid-standing-doggy': {
             desc: 'Sexo de pie penetrando por detrás.',
-            tips: 'De pie inclinada hacia adelante, de espaldas o perfil.',
+            tips: 'Requiere foto de pie inclinada o con pareja detrás.',
             inputType: 'nude'
         },
         'vid-sex-machine': {
             desc: 'Una máquina automática la penetra rítmicamente.',
-            tips: 'Reclinada o en cuatro con la zona pélvica visible.',
+            tips: 'Requiere la zona pélvica visible y posición compatible.',
             inputType: 'nude'
         },
         'vid-squirt-shura': {
             desc: 'Variante alternativa de squirting (estilo shura).',
-            tips: 'Desnuda con piernas abiertas.',
+            tips: 'Funciona mejor con foto desnuda masturbándose ya en la escena.',
             inputType: 'nude'
         },
         'vid-lactate': {
             desc: 'Presiona sus pechos y los pezones expulsan leche.',
-            tips: 'Pecho desnudo visible, medio cuerpo.',
+            tips: 'Requiere pecho desnudo visible.',
             inputType: 'nude'
         },
         'vid-fmas': {
             desc: 'Se toca analmente con los dedos.',
-            tips: 'De espaldas o con nalgas visibles.',
+            tips: 'Requiere nalgas o zona anal visible.',
             inputType: 'nude'
         },
         'vid-titfuck': {
             desc: 'Aprieta sus pechos alrededor de un pene (paizuri).',
-            tips: 'Pecho desnudo; mejor si la foto sugiere pene entre ellos.',
+            tips: 'Requiere pecho desnudo y pene entre o cerca de los pechos ya en la foto.',
             inputType: 'nude'
         },
         'vid-hand-panties': {
             desc: 'Desliza su mano dentro de las bragas para tocarse.',
-            tips: 'Foto con bragas o ropa interior visible.',
+            tips: 'Requiere bragas visibles con la mano cerca.',
             inputType: 'nude'
         },
         'vid-pov-handjob': {
             desc: 'Masturba un pene con la mano en primera persona.',
-            tips: 'Encuadre donde quepa una mano y el pene en primer plano.',
+            tips: 'Requiere mano y pene ya en la foto en primer plano.',
             inputType: 'nude'
         },
         'vid-deepthroat': {
             desc: 'Felación profunda con movimiento de cabeza.',
-            tips: 'Rostro de frente con la boca visible.',
+            tips: 'Requiere rostro con pene cerca o en la boca ya en la foto.',
             inputType: 'nude'
         },
         'vid-ult-deepthroat': {
             desc: 'Variante extrema de felación profunda.',
-            tips: 'Rostro de frente con la boca visible.',
+            tips: 'Requiere rostro con pene cerca o en la boca ya en la foto.',
             inputType: 'nude'
         },
         'vid-fullnelson': {
             desc: 'La alzan por detrás en posición full nelson.',
-            tips: 'Cuerpo completo; mejor si ya sugiere ser sostenida.',
+            tips: 'Requiere foto donde ya la estén sosteniendo por detrás; sin pareja no compone la posición.',
             inputType: 'nude'
         },
         'vid-ahegao': {
@@ -1032,37 +1032,37 @@
         },
         'vid-nipple-suck': {
             desc: 'Una boca chupa y lame su pezón a primer plano.',
-            tips: 'Pecho desnudo, primer plano del pezón.',
+            tips: 'Requiere pecho desnudo a primer plano.',
             inputType: 'nude'
         },
         'vid-cunnilingus': {
             desc: 'Recibe sexo oral con arqueo de placer.',
-            tips: 'Acostada con piernas abiertas.',
+            tips: 'Requiere foto acostada con piernas abiertas y pareja o la zona visible.',
             inputType: 'nude'
         },
         'vid-dildo-ride': {
             desc: 'Monta un consolador moviendo las caderas.',
-            tips: 'Sentada o agachada; zona pélvica visible.',
+            tips: 'Requiere foto sentada o agachada con consolador o posición de montar.',
             inputType: 'nude'
         },
         'vid-mast-cum': {
             desc: 'Paja rápida que termina en eyaculación.',
-            tips: 'Pene visible o el acto en curso.',
+            tips: 'Requiere pene visible o el acto ya en la foto.',
             inputType: 'nude'
         },
         'vid-two-fingers': {
             desc: 'Penetración con dos dedos, detalle húmedo.',
-            tips: 'Zona genital visible de cerca.',
+            tips: 'Requiere zona genital visible de cerca.',
             inputType: 'nude'
         },
         'vid-erect': {
             desc: 'El pene se va poniendo erecto progresivamente.',
-            tips: 'Pene flácido visible en la foto.',
+            tips: 'Requiere pene flácido visible.',
             inputType: 'nude'
         },
         'vid-genitals': {
             desc: 'Realza el detalle anatómico genital del video.',
-            tips: 'Zona genital visible; combina bien con otros prompts.',
+            tips: 'Requiere zona genital visible; mejora detalle, no lo inventa.',
             inputType: 'nude'
         },
         'vid-walk-back': {
@@ -1082,12 +1082,12 @@
         },
         'vid-slap': {
             desc: 'Bofetadas suaves en rostro o pecho con reacción.',
-            tips: 'Rostro o pecho visible.',
+            tips: 'Funciona mejor con foto que ya sugiera el acto.',
             inputType: 'nude'
         },
         'vid-hand-panties-v3': {
             desc: 'Variante v3 de mano dentro de las bragas.',
-            tips: 'Foto con bragas visibles.',
+            tips: 'Requiere bragas visibles con la mano cerca.',
             inputType: 'nude'
         },
         'vid-kiss-you': {
@@ -1097,12 +1097,12 @@
         },
         'vid-dreamjob': {
             desc: 'Felación suave con contacto visual al espectador.',
-            tips: 'Rostro visible de frente.',
+            tips: 'Requiere rostro con pene cerca ya en la foto.',
             inputType: 'nude'
         },
         'vid-innie': {
             desc: 'Primer plano detallado de la vulva.',
-            tips: 'Piernas abiertas, zona genital visible.',
+            tips: 'Requiere zona genital visible con piernas abiertas.',
             inputType: 'nude'
         },
         'vid-custom': {
@@ -1121,12 +1121,49 @@
         preset.exampleAfter = `${presetDir}/after`;
     });
 
+    // Presets ocultos: requieren que la foto ya contenga la pareja o la
+    // posición exacta del acto — Wan I2V no compone la escena y solo
+    // produciría movimiento genérico (gasto de crédito sin resultado).
+    // Para reactivar alguno basta quitar su id de este conjunto.
+    const DISABLED_PRESETS = new Set([
+        'vid-cowgirl',
+        'vid-missionary',
+        'vid-pov-missionary',
+        'vid-missionary-t2v',
+        'vid-doggypov',
+        'vid-front-doggy',
+        'vid-doggy-front-t2v',
+        'vid-standing-doggy',
+        'vid-fullnelson',
+        'vid-holdup',
+        'vid-titfuck',
+        'vid-pov-handjob',
+        'vid-deepthroat',
+        'vid-ult-deepthroat',
+        'vid-dreamjob',
+        'vid-cunnilingus',
+        'vid-nipple-suck',
+        'vid-kissing',
+        'vid-anal',
+        'vid-pov-insertion',
+        'vid-cumshot',
+        'vid-mast-cum',
+        'vid-spanking',
+        'vid-slap',
+        'vid-sex-machine',
+        'vid-dildo-ride'
+    ]);
+
+    const ACTIVE_PRESETS = PRESETS.filter(
+        (p) => !DISABLED_PRESETS.has(p.id)
+    );
+
     StudioAI.Config = {
         DEFAULT_NEGATIVE_PROMPT,
         DEFAULT_EXAMPLE_BEFORE,
         QUALITY_PROFILES,
         VIDEO_DURATIONS,
-        PRESETS,
+        PRESETS: ACTIVE_PRESETS,
         getPresetById(id) {
             return PRESETS.find((p) => p.id === id) || null;
         }
