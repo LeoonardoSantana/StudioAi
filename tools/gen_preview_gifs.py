@@ -23,7 +23,9 @@ import imageio_ffmpeg
 
 API = "https://leonardo-sh170--estudio-ia-serverless-api.us-east.modal.run"
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-IMG_PATH = os.path.join(ROOT, "pruebas", "reference.JPG")
+IMG_PATH = os.environ.get(
+    "GEN_IMG", os.path.join(ROOT, "pruebas", "reference.JPG")
+)
 # Los GIFs van a pruebas/ (gitignored) para subirlos a Drive y enlazarlos
 # mediante el campo previewLink de cada preset en js/presets.js
 OUT_BASE = os.path.join(ROOT, "pruebas", "preview_gifs")
@@ -169,7 +171,14 @@ def main():
     with open(IMG_PATH, "rb") as f:
         b64img = base64.b64encode(f.read()).decode()
 
-    for preset_id, lora_id, prompt in PRESETS:
+    presets = PRESETS
+    exported = os.path.join(ROOT, "pruebas", "video_presets.json")
+    if os.path.exists(exported):
+        with open(exported) as f:
+            presets = json.load(f)
+        print(f"Usando {len(presets)} presets exportados de presets.js")
+
+    for preset_id, lora_id, prompt in presets:
         if only and preset_id not in only:
             continue
         os.makedirs(OUT_BASE, exist_ok=True)
