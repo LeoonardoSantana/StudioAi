@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# flake8: noqa
 """Pruebas de generación de imagen en Modal (motor Lustify).
 
 Uso:
