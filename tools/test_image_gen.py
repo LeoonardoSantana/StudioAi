@@ -13,7 +13,7 @@ import sys
 import time
 import urllib.request
 
-API = "https://leonardo-sh170--estudio-ia-serverless-api.us-east.modal.run"
+API = "https://leoonardo170--estudio-ia-serverless-api.us-east.modal.run"
 IMG_PATH = "/Users/leonardo/Downloads/studioAI/pruebas/reference.JPG"
 OUT_DIR = "/Users/leonardo/Downloads/studioAI/pruebas"
 

@@ -21,7 +21,7 @@ import urllib.request
 
 import imageio_ffmpeg
 
-API = "https://leonardo-sh170--estudio-ia-serverless-api.us-east.modal.run"
+API = "https://leoonardo170--estudio-ia-serverless-api.us-east.modal.run"
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 IMG_PATH = os.environ.get(
     "GEN_IMG", os.path.join(ROOT, "pruebas", "reference.JPG")
