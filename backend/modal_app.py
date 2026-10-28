@@ -534,7 +534,7 @@ class ImageEngine:
                     torch_dtype=self._torch.float16,
                     use_safetensors=True,
                     local_files_only=True,
-                ).to("cuda")
+                ).to("cuda", self._torch.float16)
             )
             self.inpaint_alt.watermark = None
             self.inpaint_alt.safety_checker = None
