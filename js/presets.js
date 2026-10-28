@@ -26,29 +26,6 @@
         'assets/base/base_usuario',
         'pruebas/base_usuario'
     ];
-    const QUALITY_PROFILES = {
-        draft: {
-            id: 'draft',
-            baseSize: 832,
-            maxSize: 1024,
-            enableHr: false,
-            hrScale: 1.0
-        },
-        balanced: {
-            id: 'balanced',
-            baseSize: 1024,
-            maxSize: 1216,
-            enableHr: false,
-            hrScale: 1.0
-        },
-        original: {
-            id: 'original',
-            baseSize: 1024,
-            maxSize: 1216,
-            enableHr: false,
-            hrScale: 1.0
-        }
-    };
     const VIDEO_DURATIONS = {
         5: { seconds: 5, fps: 16, frames: 80, estimatedGpuTime: '~45 seg (1 segmento Wan)' },
         10: { seconds: 10, fps: 16, frames: 160, estimatedGpuTime: '~90 seg (2 segmentos Wan)' },
@@ -720,7 +697,6 @@
     StudioAI.Config = {
         DEFAULT_NEGATIVE_PROMPT,
         DEFAULT_EXAMPLE_BEFORE,
-        QUALITY_PROFILES,
         VIDEO_DURATIONS,
         PRESETS,
         getPresetById(id) {

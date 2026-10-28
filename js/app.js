@@ -11,7 +11,6 @@
 
     const state = {
         currentMode: 'img2img',
-        selectedQuality: 'balanced',
         videoDurationSeconds: 5,
         base64UploadedImage: null,
         base64FaceImage: null,
@@ -383,7 +382,6 @@
     function updateModeVisibility(category) {
         const isVideo = category === 'video';
         const imageOnlyIds = [
-            'imageQualityBox',
             'denoiseOption'
         ];
         const videoOnlyIds = [
@@ -524,19 +522,6 @@
         if (promptEl && state.currentPreset) {
             promptEl.value = state.currentPreset.prompt;
         }
-    }
-
-    function setQuality(quality) {
-        state.selectedQuality = quality;
-        const inactive =
-            'p-2 rounded-xl border border-slate-800 bg-slate-950 text-left transition hover:border-slate-700';
-        const active =
-            'p-2 rounded-xl border border-emerald-500/70 bg-emerald-950/30 text-left transition shadow-sm';
-
-        ['draft', 'balanced', 'original'].forEach((item) => {
-            const btn = document.getElementById(`q-${item}`);
-            if (btn) btn.className = item === quality ? active : inactive;
-        });
     }
 
     function renderPresets() {
@@ -1510,7 +1495,6 @@
                     : null,
                 maskTarget: state.currentPreset ? state.currentPreset.maskTarget : 'all_clothes',
                 skinPreAdapt: state.currentPreset ? state.currentPreset.skinPreAdapt : true,
-                quality: state.selectedQuality,
                 base64Image: state.base64UploadedImage,
                 faceImage: isVideoMode ? state.base64FaceImage : null,
                 imgWidth: state.uploadedImgWidth,
@@ -1683,7 +1667,6 @@
         clearUploadedImage,
         clearFaceReference,
         uploadFixedReference,
-        setQuality,
         setVideoDuration,
         setCustomLora,
         applyAssistantPrompt,

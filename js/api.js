@@ -13,7 +13,7 @@
         return rawUrl.trim().replace(/\/+$/, '');
     }
 
-    function computeTargetDimensions(quality, uploadedWidth = 832, uploadedHeight = 1216, isVideo = false) {
+    function computeTargetDimensions(uploadedWidth = 832, uploadedHeight = 1216, isVideo = false) {
         const safeWidth = uploadedWidth > 0 ? uploadedWidth : 832;
         const safeHeight = uploadedHeight > 0 ? uploadedHeight : 1216;
         const aspect = safeWidth / safeHeight || 1;
@@ -242,7 +242,6 @@
             loraId,
             maskTarget,
             skinPreAdapt,
-            quality,
             base64Image,
             faceImage,
             imgWidth,
@@ -264,7 +263,7 @@
         } = params;
 
         const apiUrl = normalizeUrl(rawUrl);
-        const dims = computeTargetDimensions(quality, imgWidth, imgHeight, isVideo);
+        const dims = computeTargetDimensions(imgWidth, imgHeight, isVideo);
 
         if (!apiUrl || !/^https?:\/\//i.test(apiUrl)) {
             return {
