@@ -406,14 +406,6 @@
             prompt: 'The woman pleasuring herself, hand between her legs fingering slowly, moaning with closed eyes, sensual solo motion. Static camera, no zoom.',
             themeColor: '#f472b6', motionStyle: 'breathing'
         },
-                                {
-            id: 'vid-flaccid', loraId: 'flaccid',
-            name: 'Pene Flácido a Erecto +18', badge: 'LoRA: Flaccid 480p',
-            beforeDesc: 'Foto con pareja o modelo',
-            afterDesc: 'Transición de flácido a erecto',
-            prompt: 'A flaccid penis gradually becoming erect, natural transition. Static camera, no zoom.',
-            themeColor: '#94a3b8', motionStyle: 'breathing'
-        },
                 {
             id: 'vid-solo-fem', loraId: 'female_masturbation',
             name: 'Masturbación Femenina +18', badge: 'LoRA: Solo Female',
@@ -438,14 +430,6 @@
             prompt: 'The woman squeezing her bare breasts, milk spraying from her nipples, lactating motion. Static camera, no zoom.',
             themeColor: '#f8fafc', motionStyle: 'breathing'
         },
-        {
-            id: 'vid-fmas', loraId: 'fmas_shura',
-            name: 'Dedos Anales +18', badge: 'LoRA: fmas-shura',
-            beforeDesc: 'Foto de espaldas',
-            afterDesc: 'Juego anal con dedos',
-            prompt: 'The woman fingering herself anally, slow insertion motion, pleasure expression. Static camera, no zoom.',
-            themeColor: '#a16207', motionStyle: 'breathing'
-        },
                 {
             id: 'vid-hand-panties', loraId: 'hand_panties',
             name: 'Mano en las Bragas +18', badge: 'LoRA: Hand in Panties',
@@ -469,14 +453,6 @@
             afterDesc: 'Penetración con dos dedos',
             prompt: 'Two fingers sliding in and out, fingering motion, wet close-up detail. Static camera, no zoom.',
             themeColor: '#f472b6', motionStyle: 'breathing'
-        },
-        {
-            id: 'vid-erect', loraId: 'erect_penis',
-            name: 'Erección +18', badge: 'LoRA: Erection',
-            beforeDesc: 'Foto con modelo masculino',
-            afterDesc: 'El pene se pone erecto progresivamente',
-            prompt: 'The penis slowly rising into a full erection, natural progression. Static camera, no zoom.',
-            themeColor: '#78716c', motionStyle: 'breathing'
         },
         {
             id: 'vid-genitals', loraId: 'genitals_helper',
@@ -669,11 +645,6 @@
             tips: 'Funciona mejor con mano cerca o dentro ya en la foto.',
             inputType: 'nude', previewLink: 'https://drive.google.com/file/d/1OIzKPuzDFfXE8jcoUVW73B6guGfee2DA/preview'
         },
-        'vid-flaccid': {
-            desc: 'El pene pasa de flácido a completamente erecto.',
-            tips: 'Requiere pene visible.',
-            inputType: 'nude'
-        },
         'vid-solo-fem': {
             desc: 'Se masturba sola moviendo las caderas hasta el clímax.',
             tips: 'Funciona mejor con foto desnuda con la mano en la entrepierna.',
@@ -689,11 +660,6 @@
             tips: 'Requiere pecho desnudo visible.',
             inputType: 'nude', previewLink: 'https://drive.google.com/file/d/11N4dHk6fnLkBJmb0lBu8qU6fAjhHynu9/preview'
         },
-        'vid-fmas': {
-            desc: 'Se toca analmente con los dedos.',
-            tips: 'Requiere nalgas o zona anal visible.',
-            inputType: 'nude'
-        },
         'vid-hand-panties': {
             desc: 'Desliza su mano dentro de las bragas para tocarse.',
             tips: 'Requiere bragas visibles con la mano cerca.',
@@ -708,11 +674,6 @@
             desc: 'Penetración con dos dedos, detalle húmedo.',
             tips: 'Requiere zona genital visible de cerca.',
             inputType: 'nude', previewLink: 'https://drive.google.com/file/d/1ThousB8XUvPct9q65F8JCI1g34jXLaXe/preview'
-        },
-        'vid-erect': {
-            desc: 'El pene se va poniendo erecto progresivamente.',
-            tips: 'Requiere pene flácido visible.',
-            inputType: 'nude'
         },
         'vid-genitals': {
             desc: 'Realza el detalle anatómico genital del video.',
