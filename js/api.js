@@ -141,7 +141,14 @@
         }
     }
 
-    async function pollJobUntilDone(apiUrl, callId, mediaType, maxWaitMs = 420000) {
+    // Margen sobre el timeout del backend (ImageEngine 300s, VideoEngine 900s)
+    // más arranque en frío: si el navegador se rinde antes, Modal sigue
+    // generando y cobrando un resultado que nunca se muestra.
+    function getMaxWaitMs(mediaType) {
+        return mediaType === 'video' ? 1080000 : 480000;
+    }
+
+    async function pollJobUntilDone(apiUrl, callId, mediaType, maxWaitMs = getMaxWaitMs(mediaType)) {
         const startTime = Date.now();
         while (Date.now() - startTime < maxWaitMs) {
             await sleep(2500);
@@ -165,20 +172,62 @@
                 }
 
                 if (statusData.status === 'failed') {
-                    throw new Error(statusData.error || 'Error en la ejecución de la GPU');
+                    const serverErr = new Error(statusData.error || 'Error en la ejecución de la GPU');
+                    serverErr.serverError = true;
+                    throw serverErr;
                 }
 
                 if (statusData.status === 'completed') {
                     return statusData;
                 }
             } catch (err) {
-                if (err.message && !err.message.includes('Load failed') && !err.message.includes('aborted')) {
+                if (err && err.serverError) {
                     throw err;
                 }
-                // Si hubo un micro-corte de red en un poll individual, reintentar en el siguiente ciclo
+                // Micro-corte de red ("Load failed" en Safari, "Failed to fetch" en
+                // Chrome, AbortError por timeout o pestaña suspendida): reintentar
             }
         }
         throw new Error('Tiempo de espera agotado en la cola de GPU');
+    }
+
+    function buildMediaResult(data, dims) {
+        if (data && data.video) {
+            const rawVid = data.video;
+            return Promise.resolve({
+                ok: true,
+                mediaType: 'video',
+                dataUrl: rawVid.startsWith('data:') ? rawVid : `data:video/mp4;base64,${rawVid}`,
+                dimensions: dims
+            });
+        }
+        if (data && Array.isArray(data.images) && data.images.length > 0) {
+            const rawImg = data.images[0];
+            const generatedDataUrl = rawImg.startsWith('data:')
+                ? rawImg
+                : `data:image/png;base64,${rawImg}`;
+            return getImageDataUrlDimensions(generatedDataUrl).then((outputDims) => ({
+                ok: true,
+                mediaType: 'image',
+                dataUrl: generatedDataUrl,
+                dimensions: outputDims || dims
+            }));
+        }
+        throw new Error('La respuesta del servidor no contiene multimedia válida.');
+    }
+
+    /**
+     * Retoma un trabajo ya enviado (p. ej. si iOS recargó la pestaña mientras
+     * la GPU generaba) para no perder un resultado que ya se pagó.
+     */
+    async function resumeJob(rawUrl, callId, mediaType, dims = null) {
+        const apiUrl = normalizeUrl(rawUrl);
+        try {
+            const data = await pollJobUntilDone(apiUrl, callId, mediaType);
+            return await buildMediaResult(data, dims);
+        } catch (err) {
+            return { ok: false, dimensions: dims, error: err };
+        }
     }
 
     async function generateMedia(params) {
@@ -211,7 +260,8 @@
             controlScale,
             outpaintSteps,
             outpaintControlScale,
-            imageEngine
+            imageEngine,
+            onSubmitted
         } = params;
 
         const apiUrl = normalizeUrl(rawUrl);
@@ -309,13 +359,22 @@
             let data;
             if (submitRes.ok) {
                 const submitJson = await submitRes.json();
-                data = await pollJobUntilDone(
-                    apiUrl,
-                    submitJson.call_id,
-                    submitJson.media_type || (isVideo ? 'video' : 'image'),
-                    420000
-                );
+                const jobMediaType = submitJson.media_type || (isVideo ? 'video' : 'image');
+                if (typeof onSubmitted === 'function') {
+                    try {
+                        await onSubmitted(submitJson.call_id, jobMediaType);
+                    } catch (e) {
+                        // Guardar el trabajo pendiente es opcional
+                    }
+                }
+                data = await pollJobUntilDone(apiUrl, submitJson.call_id, jobMediaType);
             } else {
+                if (submitRes.status === 402 || submitRes.status === 403) {
+                    const detail = await submitRes.json().catch(() => ({}));
+                    const creditErr = new Error(detail.detail || `HTTP ${submitRes.status}`);
+                    creditErr.serverError = true;
+                    throw creditErr;
+                }
                 // Respaldo síncrono si se usa otro servidor distinto a Modal
                 const fallbackEndpoint = isVideo
                     ? '/sdapi/v1/img2vid'
@@ -335,39 +394,14 @@
                     240000
                 );
                 if (!syncRes.ok) {
-                    throw new Error(`HTTP ${syncRes.status}`);
+                    const httpErr = new Error(`HTTP ${syncRes.status}`);
+                    httpErr.serverError = syncRes.status >= 500;
+                    throw httpErr;
                 }
                 data = await syncRes.json();
             }
 
-            if (data && data.video) {
-                const rawVid = data.video;
-                const videoDataUrl = rawVid.startsWith('data:')
-                    ? rawVid
-                    : `data:video/mp4;base64,${rawVid}`;
-                return {
-                    ok: true,
-                    mediaType: 'video',
-                    dataUrl: videoDataUrl,
-                    dimensions: dims
-                };
-            }
-
-            if (data && Array.isArray(data.images) && data.images.length > 0) {
-                const rawImg = data.images[0];
-                const generatedDataUrl = rawImg.startsWith('data:')
-                    ? rawImg
-                    : `data:image/png;base64,${rawImg}`;
-                const outputDims = await getImageDataUrlDimensions(generatedDataUrl);
-                return {
-                    ok: true,
-                    mediaType: 'image',
-                    dataUrl: generatedDataUrl,
-                    dimensions: outputDims || dims
-                };
-            }
-
-            throw new Error('La respuesta del servidor no contiene multimedia válida.');
+            return await buildMediaResult(data, dims);
         } catch (err) {
             return {
                 ok: false,
@@ -378,6 +412,7 @@
     }
 
     StudioAI.Api = {
+        resumeJob,
         normalizeUrl,
         computeTargetDimensions,
         checkServerStatus,

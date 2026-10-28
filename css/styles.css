@@ -43,3 +43,65 @@
 input[type="range"] {
     accent-color: #6366f1;
 }
+
+/* Áreas seguras de iPhone/iPad (notch, Dynamic Island, barra de inicio) */
+.safe-top {
+    padding-top: env(safe-area-inset-top);
+}
+
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+body {
+    -webkit-tap-highlight-color: transparent;
+    overflow-x: hidden;
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+#kaggleModal {
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+button,
+label,
+a,
+select,
+summary {
+    touch-action: manipulation;
+}
+
+/* Pantallas táctiles: evita el zoom automático de Safari al enfocar campos
+   (iOS amplía cualquier campo con letra menor a 16px) y agranda los toques */
+@media (pointer: coarse) {
+    input[type="text"],
+    input[type="url"],
+    input[type="search"],
+    input[type="number"],
+    select,
+    textarea {
+        font-size: 16px !important;
+    }
+
+    input[type="range"] {
+        height: 28px;
+    }
+
+    /* En táctil el comparador se controla con el dedo sobre todo el visor */
+    .compare-slider {
+        pointer-events: none;
+    }
+
+    #compareContainer {
+        touch-action: pan-y;
+    }
+
+    .history-action {
+        min-height: 36px;
+        font-size: 11px !important;
+    }
+}

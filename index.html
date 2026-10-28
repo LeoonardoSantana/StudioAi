@@ -3,13 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="robots" content="noindex, nofollow">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Media Studio</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-title" content="Studio AI">
+    <meta name="format-detection" content="telephone=no">
+    <title>Studio AI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
             darkMode: 'class',
+            future: { hoverOnlyWhenSupported: true },
             theme: {
                 extend: {
                     fontFamily: { sans: ['Inter', 'sans-serif'] }
@@ -19,12 +23,12 @@
     </script>
     <link rel="stylesheet" href="css/styles.css">
 </head>
-<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col">
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen min-h-[100dvh] flex flex-col">
 
     <!-- Barra Superior Limpia -->
-    <header class="border-b border-slate-800/80 bg-slate-900/90 backdrop-blur sticky top-0 z-30">
-        <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
-            <div class="flex items-center gap-2.5">
+    <header class="safe-top border-b border-slate-800/80 bg-slate-900/90 backdrop-blur sticky top-0 z-30">
+        <div class="max-w-6xl mx-auto px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-3">
+            <div class="flex items-center gap-2.5 min-w-0">
                 <div class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center font-bold text-white shadow-md shadow-indigo-500/20">
                     ✨
                 </div>
@@ -32,15 +36,15 @@
                     <div class="flex items-center gap-2">
                         <h1 class="text-base font-bold tracking-tight text-white">Studio AI</h1>
                         <span class="hidden md:inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30">
-                            v1.5
+                            v1.6
                         </span>
                     </div>
                 </div>
             </div>
 
             <!-- Estado del Servidor GPU Serverless (Modal.com / Kaggle) -->
-            <div class="flex items-center gap-2">
-                <div class="hidden sm:flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5">
+            <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                <div class="hidden md:flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5">
                     <span id="serverDot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
                     <input type="url" id="apiUrl" value="https://leonardo-sh170--estudio-ia-serverless-api.us-east.modal.run"
                            oninput="saveApiUrlSetting(this.value)"
@@ -53,15 +57,16 @@
                 <span id="creditBalanceBadge" onclick="checkServerStatus()" title="Consultar créditos de Modal" class="text-[10px] px-2 py-1 rounded-full border font-bold whitespace-nowrap cursor-pointer transition bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700">
                     Créditos: --
                 </span>
-                <button type="button" onclick="toggleKaggleModal()" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 rounded-xl font-semibold transition flex items-center gap-1.5 shadow-sm">
-                    <span>⚡ Configurar Modal ($30 Gratis)</span>
+                <button type="button" onclick="toggleKaggleModal()" aria-label="Configurar servidor Modal" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 sm:px-3.5 py-2 rounded-xl font-semibold transition flex items-center gap-1.5 shadow-sm">
+                    <span class="sm:hidden">⚙️</span>
+                    <span class="hidden sm:inline">⚡ Configurar Modal</span>
                 </button>
             </div>
         </div>
     </header>
 
     <!-- Contenedor Principal en 2 Columnas Simples -->
-    <main class="flex-1 max-w-6xl w-full mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+    <main class="flex-1 max-w-6xl w-full mx-auto px-3 sm:px-4 py-4 sm:py-6 grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-start">
 
         <!-- COLUMNA IZQUIERDA: Pasos 1, 2 y 3 (5 columnas) -->
         <section class="lg:col-span-5 flex flex-col gap-5" aria-label="Controles de configuración">
@@ -135,16 +140,16 @@
                 <textarea id="prompt" rows="3" placeholder="Elige un preset de la derecha o escribe aquí qué ropa, anatomía, pose o movimiento quieres..."
                           class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition resize-none"></textarea>
 
-                <div class="flex items-center justify-between -mt-1">
+                <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 -mt-1">
                     <p class="text-[10px] text-slate-500">✏️ Puedes editar el prompt del preset antes de generar.</p>
-                    <button type="button" onclick="resetPresetPrompt()" class="text-[10px] text-indigo-400 hover:text-indigo-300 font-semibold transition">
+                    <button type="button" onclick="resetPresetPrompt()" class="text-[11px] text-indigo-400 hover:text-indigo-300 font-semibold transition py-1">
                         ↺ Restaurar prompt del preset
                     </button>
                 </div>
 
                 <!-- Asistente de Prompt para Video (Wan 2.1) -->
                 <div id="promptAssistantBox" class="hidden bg-fuchsia-950/20 border border-fuchsia-800/40 rounded-xl p-3 space-y-2.5">
-                    <div class="flex items-center justify-between">
+                    <div class="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
                         <label class="text-[11px] font-semibold text-fuchsia-300">🪄 Asistente de Prompt NSFW</label>
                         <span class="text-[9px] text-fuchsia-500">Elige en español → genera el prompt en inglés</span>
                     </div>
@@ -375,7 +380,7 @@
         <section class="lg:col-span-7 flex flex-col gap-5" aria-label="Visor, presets e historial">
 
             <!-- VISOR INTERACTIVO (Referencias Fijas Antes/Después, Resultado o Video Wan 2.1) -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-3 shadow-xl">
+            <div id="viewerCard" class="scroll-mt-20 bg-slate-900 border border-slate-800 rounded-2xl p-3 sm:p-4 flex flex-col gap-3 shadow-xl">
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <div class="flex flex-wrap gap-1.5">
                         <button type="button" onclick="useResultForVideo()" id="btnUseForVideo" class="hidden text-xs px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition shadow-sm">
@@ -394,7 +399,7 @@
                 </div>
 
                 <!-- Lienzo Principal -->
-                <div class="relative w-full h-[320px] sm:h-[360px] bg-slate-950 rounded-xl overflow-hidden border border-slate-800 flex items-center justify-center select-none">
+                <div class="relative w-full h-[58vh] min-h-[300px] max-h-[460px] md:h-[480px] md:max-h-none lg:h-[420px] bg-slate-950 rounded-xl overflow-hidden border border-slate-800 flex items-center justify-center select-none">
 
                     <!-- MODO 1: Comparador Antes / Después con imágenes incluidas por preset -->
                     <div id="compareContainer" class="relative w-full h-full flex items-center justify-center overflow-hidden">
@@ -431,24 +436,21 @@
 
                         <input type="range" id="compareSlider" min="5" max="95" value="50" oninput="moveCompareSlider(this.value)"
                                aria-label="Comparar antes y después"
-                               class="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize z-30">
+                               class="compare-slider absolute inset-0 w-full h-full opacity-0 cursor-ew-resize z-30">
                     </div>
 
                     <!-- MODO 2: Reproductor de Video Wan 2.1 / Demo en Vivo -->
                     <div id="videoDemoContainer" class="hidden relative w-full h-full flex-col items-center justify-center bg-slate-950 overflow-hidden">
-                        <canvas id="videoDemoCanvas" class="w-full h-full object-cover"></canvas>
+                        <canvas id="videoDemoCanvas" class="w-full h-full object-contain"></canvas>
                         <iframe id="videoPresetPreview" class="hidden absolute inset-0 w-full h-full bg-slate-950 z-0" allow="autoplay" allowfullscreen title="Ejemplo real del preset"></iframe>
-                        <video id="resultVideo" class="hidden absolute inset-0 w-full h-full object-contain bg-slate-950 z-20" controls autoplay loop playsinline></video>
-                        <div class="absolute top-3 left-3 bg-purple-600/90 backdrop-blur text-white text-[11px] font-bold px-3 py-1 rounded-lg shadow flex items-center gap-2 z-10">
-                            <span class="w-2 h-2 rounded-full bg-white animate-ping"></span>
-                            <span id="videoDemoLabel">Demo en Vivo</span>
+                        <video id="resultVideo" class="hidden absolute inset-0 w-full h-full object-contain bg-slate-950 z-20" controls autoplay loop muted playsinline></video>
+                        <div class="absolute top-3 left-3 max-w-[calc(100%-1.5rem)] bg-purple-600/90 backdrop-blur text-white text-[11px] font-bold px-3 py-1 rounded-lg shadow flex items-center gap-2 z-10">
+                            <span class="w-2 h-2 rounded-full bg-white animate-ping shrink-0"></span>
+                            <span id="videoDemoLabel" class="truncate">Demo en Vivo</span>
                         </div>
-                        <div class="absolute bottom-3 inset-x-3 bg-slate-900/90 backdrop-blur border border-slate-700 rounded-xl p-2.5 flex items-center justify-between text-xs z-10">
-                            <div class="flex items-center gap-2.5">
-                                <button type="button" onclick="toggleVideoPause()" id="pauseBtn" class="w-7 h-7 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center font-bold">⏸</button>
-                                <span id="videoPresetInfo" class="text-slate-200 font-medium">Vista previa de animación</span>
-                            </div>
-                            <a id="presetSampleLink" href="#" target="_blank" rel="noopener noreferrer" class="hidden text-[10px] font-bold text-fuchsia-400 hover:text-fuchsia-300 transition shrink-0">🎬 Ejemplo real ↗</a>
+                        <div class="absolute bottom-3 inset-x-3 bg-slate-900/90 backdrop-blur border border-slate-700 rounded-xl p-2 sm:p-2.5 flex items-center justify-between gap-2 text-xs z-10">
+                            <span id="videoPresetInfo" class="text-slate-200 font-medium truncate min-w-0">Vista previa de animación</span>
+                            <a id="presetSampleLink" href="#" target="_blank" rel="noopener noreferrer" class="hidden text-[11px] font-bold text-fuchsia-400 hover:text-fuchsia-300 transition shrink-0 py-1">🎬 Ejemplo ↗</a>
                         </div>
                     </div>
 
@@ -487,7 +489,7 @@
                 </div>
 
                 <!-- Tarjetas de Presets Limpias -->
-                <div id="presetsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[300px] overflow-y-auto pr-1">
+                <div id="presetsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[65vh] sm:max-h-[460px] lg:max-h-[340px] overflow-y-auto overscroll-contain pr-1">
                     <!-- Renderizado dinámico por js/app.js -->
                 </div>
             </div>
@@ -507,7 +509,7 @@
                     </div>
 
                     <div class="flex items-center gap-1.5">
-                        <button type="button" onclick="connectLocalProjectFolder()" id="btnFolderSync" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1.5 rounded-xl font-medium transition flex items-center gap-1" title="Guardar automáticamente una copia en una carpeta de tu PC">
+                        <button type="button" onclick="connectLocalProjectFolder()" id="btnFolderSync" class="hidden text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1.5 rounded-xl font-medium transition flex items-center gap-1" title="Guardar automáticamente una copia en una carpeta de tu PC">
                             <span>📁 Vincular Carpeta PC</span>
                         </button>
                         <button type="button" onclick="clearAllHistory()" id="btnClearAll" class="hidden text-[11px] bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-800/60 px-2.5 py-1.5 rounded-xl font-medium transition">
@@ -517,7 +519,7 @@
                 </div>
 
                 <!-- Galería de Archivos Guardados -->
-                <div id="historyGallery" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-[340px] overflow-y-auto pr-1">
+                <div id="historyGallery" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-[70vh] sm:max-h-[480px] lg:max-h-[380px] overflow-y-auto overscroll-contain pr-1">
                     <!-- Renderizado dinámico por js/app.js -->
                 </div>
             </div>
@@ -526,8 +528,8 @@
     </main>
 
     <!-- Modal Guía Serverless Modal.com ($30/mes Gratis) + Kaggle Modo Silencioso -->
-    <div id="kaggleModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-5 shadow-2xl flex flex-col gap-4 my-auto max-h-[90vh] overflow-y-auto">
+    <div id="kaggleModal" onclick="if (event.target === this) toggleKaggleModal()" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-4 sm:p-5 shadow-2xl flex flex-col gap-4 my-auto max-h-[90vh] max-h-[90dvh] overflow-y-auto overscroll-contain">
             <div class="flex items-center justify-between border-b border-slate-800 pb-3">
                 <div class="flex items-center gap-2">
                     <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold text-xs">SERVERLESS GPU</span>
@@ -537,7 +539,7 @@
             </div>
 
             <!-- Pestañas Modal.com vs Kaggle Silencioso -->
-            <div class="flex gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
+            <div class="flex flex-col sm:flex-row gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
                 <button type="button" id="tabGuideModal" onclick="switchCloudTab('modal')" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold transition">
                     🚀 Opción 1: Modal.com (Recomendado - URL Fija 24/7)
                 </button>
@@ -614,7 +616,7 @@ srv.wait()</pre>
                 <!-- Enlace del servidor + Preparación para GitHub Pages -->
                 <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2">
                     <strong class="text-emerald-400 block">Enlace de tu Servidor (Se guarda automáticamente en tu navegador)</strong>
-                    <div class="flex gap-2">
+                    <div class="flex flex-col sm:flex-row gap-2">
                         <input type="url" id="modalApiUrl" value="https://leonardo-sh170--estudio-ia-serverless-api.us-east.modal.run"
                                oninput="saveApiUrlSetting(this.value)"
                                placeholder="https://tu-usuario--estudio-ia-serverless-api.modal.run"

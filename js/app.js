@@ -602,7 +602,7 @@
 
         const VIDEO_GROUPS = [
             ['undress', '🔓 ACEPTA ROPA — el video genera el desnudo'],
-            ['nude', '🔥 NECESITA NUDE/ACCIÓN — la foto ya debe mostrar la pose o la pareja'],
+            ['nude', '🔥 NECESITA FOTO DESNUDA — solo anima lo que ya se ve en la imagen'],
             ['any', '✨ FUNCIONA CON CUALQUIER FOTO']
         ];
         if (state.currentFilter === 'video') {
@@ -878,7 +878,7 @@
 
         setMainCategory('video');
         showMessage(
-            'Tu foto generada se cargó como base en el Paso 1. Ahora pulsa "Generar Resultado Ahora" para animarla con Wan 2.1.'
+            'Tu foto generada se cargó como base en el Paso 1. Elige un preset de video y pulsa "✨ 3. Generar" para animarla con Wan 2.1.'
         );
     }
 
@@ -1061,11 +1061,12 @@
             mediaWrapper.addEventListener('click', () => previewFromVault(item.id));
 
             if (isVideoStream) {
+                // Sin autoplay: decenas de videos simultáneos agotan la memoria
+                // de Safari en iPhone. #t=0.1 fuerza a iOS a pintar el primer frame.
                 const videoEl = document.createElement('video');
-                videoEl.src = playableUrl;
-                videoEl.className = 'w-full h-full object-cover';
-                videoEl.autoplay = true;
-                videoEl.loop = true;
+                videoEl.src = `${playableUrl}#t=0.1`;
+                videoEl.className = 'w-full h-full object-cover pointer-events-none';
+                videoEl.preload = 'metadata';
                 videoEl.muted = true;
                 videoEl.playsInline = true;
                 mediaWrapper.appendChild(videoEl);
@@ -1114,14 +1115,14 @@
             const btnDownload = document.createElement('button');
             btnDownload.type = 'button';
             btnDownload.className =
-                'py-1 px-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white text-[10px] font-semibold transition flex items-center justify-center gap-1';
+                'history-action py-1.5 px-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white text-[10px] font-semibold transition flex items-center justify-center gap-1';
             btnDownload.textContent = isIOSLikeDevice() ? '⬇ Guardar' : '⬇ Descargar';
             btnDownload.addEventListener('click', () => downloadFromVault(item));
 
             const btnDelete = document.createElement('button');
             btnDelete.type = 'button';
             btnDelete.className =
-                'py-1 px-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-600 text-rose-300 hover:text-white text-[10px] font-semibold transition flex items-center justify-center gap-1';
+                'history-action py-1.5 px-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-600 text-rose-300 hover:text-white text-[10px] font-semibold transition flex items-center justify-center gap-1';
             btnDelete.textContent = '✕ Borrar';
             btnDelete.addEventListener('click', () => deleteFromVault(item.id));
 
@@ -1203,12 +1204,14 @@
     }
 
     async function deleteFromVault(id) {
+        if (!global.confirm('¿Borrar este resultado del historial? No se puede deshacer.')) return;
         await StudioAI.Storage.deleteCreation(id);
         await loadHistoryGallery();
         showMessage('Archivo eliminado de la carpeta del proyecto.');
     }
 
     async function clearAllHistory() {
+        if (!global.confirm('¿Vaciar TODO el historial? Se borrarán todas las fotos y videos guardados y no se puede deshacer.')) return;
         await StudioAI.Storage.clearAllCreations();
         await loadHistoryGallery();
         showMessage('Se vació todo el historial del proyecto.');
@@ -1248,6 +1251,102 @@
         }
     }
 
+    const PENDING_JOB_KEY = 'pendingJob';
+    const PENDING_JOB_MAX_AGE_MS = 30 * 60 * 1000;
+
+    function describeGenerationError(err) {
+        const detail = err && err.message ? err.message : 'Sin respuesta del servidor';
+        if (err && err.serverError) {
+            return `El servidor no pudo completar la generación: ${detail}`;
+        }
+        if (/tiempo de espera/i.test(detail)) {
+            return `${detail}. Si la GPU seguía trabajando, el resultado puede aparecer en tu historial al recargar la página.`;
+        }
+        return `No se pudo contactar con el servidor (${detail}). Revisa tu conexión o tu enlace .modal.run en ⚙️.`;
+    }
+
+    function scrollViewerIntoViewOnMobile() {
+        if (global.matchMedia && global.matchMedia('(min-width: 1024px)').matches) return;
+        const viewer = document.getElementById('viewerCard');
+        if (viewer) viewer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    async function presentAndSaveResult(response, meta) {
+        const btnSendToVid = document.getElementById('btnUseForVideo');
+        const resultVideo = document.getElementById('resultVideo');
+        const resultImg = document.getElementById('resultImage');
+
+        state.lastGeneratedResultUrl = response.dataUrl;
+        state.lastGeneratedMediaType = response.mediaType || meta.fallbackType || 'image';
+        const playableResultUrl = getPlayableMediaUrl(response.dataUrl);
+
+        if (state.lastGeneratedMediaType === 'video') {
+            if (!state.currentPreset || state.currentPreset.category !== 'video') {
+                setMainCategory('video');
+            }
+            if (btnSendToVid) btnSendToVid.classList.add('hidden');
+            setViewerMode('video');
+            if (resultVideo) {
+                resultVideo.src = playableResultUrl;
+                resultVideo.classList.remove('hidden');
+                resultVideo.play().catch(() => {});
+            }
+        } else {
+            if (btnSendToVid) btnSendToVid.classList.remove('hidden');
+            if (resultImg) resultImg.src = playableResultUrl;
+            setViewerMode('result');
+        }
+        scrollViewerIntoViewOnMobile();
+
+        await StudioAI.Storage.saveCreation({
+            id: Date.now().toString(),
+            timestamp: Date.now(),
+            timeStr: meta.timeStr,
+            presetName: meta.presetName,
+            type: state.lastGeneratedMediaType,
+            duration: meta.duration,
+            dataUrl: response.dataUrl
+        });
+        await loadHistoryGallery();
+    }
+
+    /**
+     * iOS descarta pestañas en segundo plano: si el usuario cambió de app
+     * mientras la GPU generaba, al volver se recupera el trabajo ya pagado.
+     */
+    async function resumePendingJob() {
+        const job = await StudioAI.Storage.getSetting(PENDING_JOB_KEY);
+        if (!job || !job.callId) return;
+        if (!job.startedAt || Date.now() - job.startedAt > PENDING_JOB_MAX_AGE_MS) {
+            await StudioAI.Storage.saveSetting(PENDING_JOB_KEY, null);
+            return;
+        }
+
+        state.isGenerating = true;
+        const generateBtn = document.getElementById('generateBtn');
+        if (generateBtn) generateBtn.disabled = true;
+        showMessage(`⏳ Recuperando la generación en curso (${job.presetName})...`);
+        try {
+            const response = await StudioAI.Api.resumeJob(job.rawUrl, job.callId, job.mediaType);
+            if (response.ok && response.dataUrl) {
+                await presentAndSaveResult(response, {
+                    presetName: job.presetName,
+                    timeStr: job.timeStr,
+                    duration: job.duration,
+                    fallbackType: job.mediaType
+                });
+                showMessage(`¡Recuperado el resultado de "${job.presetName}" y guardado en tu historial!`);
+            } else {
+                showMessage(describeGenerationError(response.error), true);
+            }
+        } finally {
+            await StudioAI.Storage.saveSetting(PENDING_JOB_KEY, null);
+            state.isGenerating = false;
+            if (generateBtn) generateBtn.disabled = false;
+            refreshBillingStatus(job.rawUrl).catch(() => {});
+        }
+    }
+
     async function generateMedia() {
         if (state.isGenerating) return;
 
@@ -1260,9 +1359,6 @@
         const loadingEl = document.getElementById('loadingState');
         const loadingTextEl = document.getElementById('loadingStatusText');
         const generateBtn = document.getElementById('generateBtn');
-        const btnSendToVid = document.getElementById('btnUseForVideo');
-        const resultVideo = document.getElementById('resultVideo');
-        const resultImg = document.getElementById('resultImage');
 
         const rawUrl = apiInput ? apiInput.value.trim() : '';
         const prompt = promptInput ? promptInput.value.trim() : '';
@@ -1504,7 +1600,17 @@
                 outpaintControlScale: state.currentPreset
                     ? state.currentPreset.outpaintControlScale
                     : null,
-                imageEngine: state.imageEngine
+                imageEngine: state.imageEngine,
+                onSubmitted: (callId, mediaType) =>
+                    StudioAI.Storage.saveSetting(PENDING_JOB_KEY, {
+                        callId,
+                        mediaType,
+                        rawUrl,
+                        presetName: presetTitle,
+                        timeStr,
+                        duration: isVideoMode ? state.videoDurationSeconds : null,
+                        startedAt: Date.now()
+                    })
             });
 
             if (response.ok && response.dataUrl) {
@@ -1522,54 +1628,23 @@
                     'Guardado automáticamente en tu historial'
                 );
 
-                state.lastGeneratedResultUrl = response.dataUrl;
-                state.lastGeneratedMediaType =
-                    response.mediaType || (isVideoMode ? 'video' : 'image');
-                const playableResultUrl = getPlayableMediaUrl(response.dataUrl);
-
-                if (state.lastGeneratedMediaType === 'video') {
-                    if (btnSendToVid) btnSendToVid.classList.add('hidden');
-                    setViewerMode('video');
-                    if (resultVideo) {
-                        resultVideo.src = playableResultUrl;
-                        resultVideo.classList.remove('hidden');
-                        resultVideo.play().catch(() => {});
-                    }
-                } else {
-                    if (btnSendToVid) btnSendToVid.classList.remove('hidden');
-                    if (resultImg) {
-                        resultImg.src = playableResultUrl;
-                    }
-                    setViewerMode('result');
-                }
-
-                await StudioAI.Storage.saveCreation({
-                    id: Date.now().toString(),
-                    timestamp: Date.now(),
-                    timeStr,
+                await presentAndSaveResult(response, {
                     presetName: presetTitle,
-                    type: state.lastGeneratedMediaType,
+                    timeStr,
                     duration: isVideoMode ? state.videoDurationSeconds : null,
-                    dataUrl: response.dataUrl
+                    fallbackType: isVideoMode ? 'video' : 'image'
                 });
-
-                await loadHistoryGallery();
+                const dims = response.dimensions;
                 showMessage(
                     state.lastGeneratedMediaType === 'video'
                         ? `¡Video MP4 generado en ${totalElapsed}s y guardado en tu Carpeta del Proyecto!`
-                        : `¡Resultado generado con rostro 100% protegido (${response.dimensions.width}×${response.dimensions.height}px) en ${totalElapsed}s!`
+                        : `¡Resultado generado${dims ? ` (${dims.width}×${dims.height}px)` : ''} en ${totalElapsed}s!`
                 );
             } else {
-                const errDetail =
-                    response.error && response.error.message
-                        ? response.error.message
-                        : 'Sin respuesta del servidor';
-                showMessage(
-                    `No se pudo completar la generación en el servidor (${errDetail}). Verifica tu enlace .modal.run arriba a la derecha.`,
-                    true
-                );
+                showMessage(describeGenerationError(response.error), true);
             }
         } finally {
+            StudioAI.Storage.saveSetting(PENDING_JOB_KEY, null);
             refreshBillingStatus(rawUrl).catch(() => {});
             clearInterval(timerInterval);
             state.isGenerating = false;
@@ -1628,11 +1703,16 @@
     async function init() {
         bindDragAndDrop();
         bindKeyboardShortcuts();
+        StudioAI.Viewer.bindCompareTouch();
+        if (typeof global.showDirectoryPicker === 'function') {
+            setElementHidden('btnFolderSync', false);
+        }
 
         await StudioAI.Storage.init();
         await loadSavedSettings();
         await loadHistoryGallery();
         setMainCategory('image');
+        resumePendingJob().catch(() => {});
 
         const apiInput = document.getElementById('apiUrl');
         const rawUrl = apiInput ? apiInput.value : '';

@@ -77,6 +77,38 @@
         }
     }
 
+    /**
+     * En iPhone/iPad un <input type="range"> invisible solo responde si se
+     * arrastra exactamente su pulgar; aquí el dedo controla el comparador
+     * desde cualquier punto del visor, sin bloquear el scroll vertical.
+     */
+    function bindCompareTouch() {
+        const container = document.getElementById('compareContainer');
+        if (!container || container.dataset.touchBound) return;
+        container.dataset.touchBound = '1';
+
+        let activePointer = null;
+        const updateFromEvent = (e) => {
+            const rect = container.getBoundingClientRect();
+            if (rect.width <= 0) return;
+            moveCompareSlider(((e.clientX - rect.left) / rect.width) * 100);
+        };
+
+        container.addEventListener('pointerdown', (e) => {
+            if (e.target.closest('label, button, a')) return;
+            activePointer = e.pointerId;
+            updateFromEvent(e);
+        });
+        container.addEventListener('pointermove', (e) => {
+            if (e.pointerId === activePointer) updateFromEvent(e);
+        });
+        ['pointerup', 'pointercancel', 'pointerleave'].forEach((evt) => {
+            container.addEventListener(evt, (e) => {
+                if (e.pointerId === activePointer) activePointer = null;
+            });
+        });
+    }
+
     const REFERENCE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
 
     function normalizeReferenceSources(source) {
@@ -103,7 +135,7 @@
         }
 
         const img = document.createElement('img');
-        img.className = 'max-h-[340px] max-w-full object-contain rounded-lg';
+        img.className = 'max-h-full max-w-full object-contain rounded-lg';
         img.alt = alt;
         let sourceIndex = 0;
         img.onerror = function () {
@@ -320,6 +352,7 @@
     StudioAI.Viewer = {
         compressAndResizeImage,
         moveCompareSlider,
+        bindCompareTouch,
         updateBeforeAfterVisuals,
         startVideoDemoCanvas,
         stopVideoDemoCanvas,
