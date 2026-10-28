@@ -133,7 +133,7 @@ TESTS = {
         "prompt": (
             "photorealistic fully nude woman, same seated pose, same body position "
             "and camera framing, empty hands resting naturally, completely naked, "
-            "full natural breasts, prominent puffy areolae and nipples, "
+            "full round breasts, prominent puffy areolae and nipples, "
             "bare abdomen and navel, exposed vulva, bare legs and bare feet, "
             "natural skin tone matching her face, soft rosy undertone, detailed natural skin texture, "
             "soft natural lighting, uncensored"
@@ -155,9 +155,9 @@ TESTS = {
         "prompt": (
             "photorealistic fully nude woman, same face identity, same seated pose, "
             "same hand near hair, empty hand, same thin necklace and jewelry, "
-            "completely naked, full natural breasts, puffy areolae and nipples "
-            "matching her natural lip color, long bare abdomen and navel, "
-            "bare hips and upper thighs visible, subtle natural pubic hair, "
+            "completely naked, full round breasts, puffy areolae and nipples "
+            "matching her natural lip color, bare abdomen and navel, "
+            "bare hips and upper thighs visible, smooth bare vulva, "
             "natural slim body proportions, natural skin tone matching her face, soft rosy undertone, "
             "detailed natural skin texture, soft natural lighting, uncensored"
         ),
@@ -171,9 +171,9 @@ TESTS = {
         "prompt": (
             "photorealistic fully nude woman, same face identity, same seated pose, "
             "same hand near hair, empty hand, same thin necklace and jewelry, "
-            "completely naked, full natural breasts, puffy areolae and nipples "
-            "matching her natural lip color, long bare abdomen and navel, "
-            "bare hips and upper thighs visible, subtle natural pubic hair, "
+            "completely naked, full round breasts, puffy areolae and nipples "
+            "matching her natural lip color, bare abdomen and navel, "
+            "bare hips and upper thighs visible, smooth bare vulva, "
             "natural slim body proportions, natural skin tone matching her face, soft rosy undertone, "
             "detailed natural skin texture, soft natural lighting, uncensored"
         ),
@@ -241,11 +241,11 @@ TESTS = {
         "prompt": (
             "photorealistic fully nude woman, same face identity, same seated pose, "
             "same hand near hair, empty hand, same thin necklace and jewelry, "
-            "completely naked, full natural breasts, puffy areolae and nipples "
+            "completely naked, natural breasts, puffy areolae and nipples "
             "matching her natural lip color, "
             "long bare abdomen and navel, bare hips and upper thighs visible, "
             "subtle natural pubic hair, natural slim body proportions, "
-            "natural skin tone matching her face, soft rosy undertone, detailed natural skin texture, "
+            "warm golden skin tone, detailed natural skin texture, "
             "soft natural lighting, uncensored"
         ),
         "negative_prompt": (
