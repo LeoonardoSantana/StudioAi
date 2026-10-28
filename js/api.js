@@ -256,6 +256,7 @@
             expandBody,
             fullBody,
             frameScale,
+            frameAlignX,
             controlScale,
             outpaintSteps,
             outpaintControlScale,
@@ -315,6 +316,9 @@
         }
         if (Number.isFinite(frameScale)) {
             payload.frame_scale = frameScale;
+        }
+        if (Number.isFinite(frameAlignX)) {
+            payload.frame_align_x = frameAlignX;
         }
         if (Number.isFinite(controlScale)) {
             payload.control_scale = controlScale;

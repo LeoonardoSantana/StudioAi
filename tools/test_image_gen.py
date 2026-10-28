@@ -135,7 +135,7 @@ TESTS = {
             "and camera framing, empty hands resting naturally, completely naked, "
             "full natural breasts, prominent puffy areolae and nipples, "
             "bare abdomen and navel, exposed vulva, bare legs and bare feet, "
-            "warm golden skin tone, detailed natural skin texture, "
+            "natural skin tone matching her face, soft rosy undertone, detailed natural skin texture, "
             "soft natural lighting, uncensored"
         ),
         "negative_prompt": (
@@ -148,6 +148,40 @@ TESTS = {
         "steps": 30, "cfg_scale": 5.0, "denoising_strength": 1.0,
         "blend_mode": "raw", "preserve_limbs": True, "seed": 7,
         "refine_strength": 0.3,
+    },
+    # Objetivo result.JPG: mismo encuadre que reference (sin encoger marco),
+    # prompt actual anclado a labios, senos "full natural". A/B de skin_pre_adapt.
+    "target": {
+        "prompt": (
+            "photorealistic fully nude woman, same face identity, same seated pose, "
+            "same hand near hair, empty hand, same thin necklace and jewelry, "
+            "completely naked, full natural breasts, puffy areolae and nipples "
+            "matching her natural lip color, long bare abdomen and navel, "
+            "bare hips and upper thighs visible, subtle natural pubic hair, "
+            "natural slim body proportions, natural skin tone matching her face, soft rosy undertone, "
+            "detailed natural skin texture, soft natural lighting, uncensored"
+        ),
+        "negative_prompt": NUDE_NEG,
+        "mask_target": "all_clothes",
+        "steps": 30, "cfg_scale": 5.0, "denoising_strength": 1.0,
+        "blend_mode": "raw", "preserve_limbs": True, "seed": 47,
+        "refine_strength": 0.3, "skin_pre_adapt": True,
+    },
+    "target_noadapt": {
+        "prompt": (
+            "photorealistic fully nude woman, same face identity, same seated pose, "
+            "same hand near hair, empty hand, same thin necklace and jewelry, "
+            "completely naked, full natural breasts, puffy areolae and nipples "
+            "matching her natural lip color, long bare abdomen and navel, "
+            "bare hips and upper thighs visible, subtle natural pubic hair, "
+            "natural slim body proportions, natural skin tone matching her face, soft rosy undertone, "
+            "detailed natural skin texture, soft natural lighting, uncensored"
+        ),
+        "negative_prompt": NUDE_NEG,
+        "mask_target": "all_clothes",
+        "steps": 30, "cfg_scale": 5.0, "denoising_strength": 1.0,
+        "blend_mode": "raw", "preserve_limbs": True, "seed": 47,
+        "refine_strength": 0.3, "skin_pre_adapt": False,
     },
     # Igual que "ab" pero cfg 7 (aísla si el moteado viene del cfg bajo)
     "ab7": {
@@ -207,11 +241,11 @@ TESTS = {
         "prompt": (
             "photorealistic fully nude woman, same face identity, same seated pose, "
             "same hand near hair, empty hand, same thin necklace and jewelry, "
-            "completely naked, natural breasts, puffy areolae and nipples "
+            "completely naked, full natural breasts, puffy areolae and nipples "
             "matching her natural lip color, "
             "long bare abdomen and navel, bare hips and upper thighs visible, "
             "subtle natural pubic hair, natural slim body proportions, "
-            "warm golden skin tone, detailed natural skin texture, "
+            "natural skin tone matching her face, soft rosy undertone, detailed natural skin texture, "
             "soft natural lighting, uncensored"
         ),
         "negative_prompt": (
@@ -226,7 +260,8 @@ TESTS = {
         "steps": 32, "cfg_scale": 6.0, "denoising_strength": 1.0,
         "blend_mode": "raw", "preserve_limbs": True,
         "expand_body": True, "full_body": True,
-        "frame_scale": 0.62, "control_scale": 1.30,
+        "frame_scale": 0.62, "frame_align_x": 0.75, "control_scale": 1.30,
+        "skin_pre_adapt": True,
         "outpaint_steps": 30, "outpaint_control_scale": 1.35,
         "refine_strength": 0.3,
         "seed": 42,
@@ -281,7 +316,7 @@ def main():
         "cfg_scale": cfg["cfg_scale"],
         "lora_scale": 0.0,
         "mask_target": cfg["mask_target"],
-        "skin_pre_adapt": False,
+        "skin_pre_adapt": cfg.get("skin_pre_adapt", False),
         "width": 832,
         "height": 1216,
         "init_images": [f"data:image/jpeg;base64,{b64}"],
@@ -289,7 +324,7 @@ def main():
     for k in ("denoising_strength", "blend_mode", "preserve_limbs", "seed",
               "expand_body", "full_body", "frame_scale", "control_scale",
               "outpaint_steps", "outpaint_control_scale",
-              "refine_strength", "extend_ratio", "debug"):
+              "refine_strength", "extend_ratio", "frame_align_x", "debug"):
         if k in cfg:
             payload[k] = cfg[k]
     if len(sys.argv) > 3:

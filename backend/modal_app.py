@@ -1763,10 +1763,14 @@ class ImageEngine:
             if np.count_nonzero(active_bool) >= 500:
                 target_rgb = np.array(skin_rgb, dtype=np.float32)
                 gen_rgb = np.median(gen_np[active_bool], axis=0)
-                desired_rgb = gen_rgb * 0.10 + target_rgb * 0.90
-                ratio = np.clip(
-                    desired_rgb / np.maximum(gen_rgb, 1.0), 0.70, 1.32
+                desired_rgb = gen_rgb * 0.40 + target_rgb * 0.60
+                ratio = desired_rgb / np.maximum(gen_rgb, 1.0)
+                lum_w = np.array([0.299, 0.587, 0.114], dtype=np.float32)
+                lum_ratio = float(
+                    np.dot(ratio * gen_rgb, lum_w)
+                    / max(float(np.dot(gen_rgb, lum_w)), 1.0)
                 )
+                ratio = np.clip(ratio / max(lum_ratio, 1e-3), 0.85, 1.18)
                 gen_np[active_bool] = np.clip(
                     gen_np[active_bool] * ratio, 0.0, 255.0
                 )
@@ -1832,7 +1836,12 @@ class ImageEngine:
             )
             scaled_w = max(1, int(sdxl_w * frame_scale))
             scaled_h = max(1, int(sdxl_h * frame_scale))
-            offset_x = (sdxl_w - scaled_w) // 2
+            _align_raw = payload.get("frame_align_x")
+            frame_align_x = max(
+                0.0,
+                min(1.0, float(0.5 if _align_raw is None else _align_raw)),
+            )
+            offset_x = int((sdxl_w - scaled_w) * frame_align_x)
             offset_y = max(0, int(sdxl_h * 0.01))
             frame = first_stage.resize(
                 (scaled_w, scaled_h), Image.LANCZOS
@@ -1938,7 +1947,7 @@ class ImageEngine:
             outpaint_negative = self._fit_prompt_tokens(outpaint_negative)
             print(
                 "Full body outpaint:",
-                f"scale={frame_scale:.2f} frame={scaled_w}x{scaled_h}",
+                f"scale={frame_scale:.2f} frame={scaled_w}x{scaled_h} align_x={frame_align_x:.2f}",
                 f"steps={outpaint_steps} control={outpaint_control}",
             )
             outpainted = inpaint_pipe(

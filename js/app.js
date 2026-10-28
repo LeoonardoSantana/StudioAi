@@ -1523,6 +1523,9 @@
                 frameScale: state.currentPreset
                     ? state.currentPreset.frameScale
                     : null,
+                frameAlignX: state.currentPreset
+                    ? state.currentPreset.frameAlignX
+                    : null,
                 controlScale: state.currentPreset
                     ? state.currentPreset.controlScale
                     : null,
