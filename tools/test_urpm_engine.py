@@ -1,0 +1,259 @@
+#!/usr/bin/env python3
+"""Pruebas del checkpoint alternativo URPM en Modal.
+
+Uso:
+    python3 tools/test_urpm_engine.py <nombre_prueba>
+
+Envia un trabajo a /sdapi/v1/job/submit con image_engine=urpm,
+hace polling hasta completar y guarda el PNG en pruebas/.
+"""
+import base64
+import json
+import sys
+import time
+import urllib.request
+
+API = "https://leonardo-sh170--estudio-ia-serverless-api.us-east.modal.run"
+IMG_PATH = "/Users/leonardo/Downloads/studioAI/pruebas/reference.JPG"
+OUT_DIR = "/Users/leonardo/Downloads/studioAI/pruebas"
+
+NUDE_NEG = (
+    "bad anatomy, extra limbs, extra fingers, missing fingers, deformed hands, "
+    "distorted torso, extra breasts, bad nipples, cut arms, blurry, lowres, "
+    "worst quality, low quality, watermark, text, signature, clothing, bra, panties"
+)
+
+TESTS = {
+    # Undress completo sobre la foto vestida (equivalente a img-realism)
+    "undress": {
+        "prompt": (
+            "photorealistic fully nude woman, same seated pose, same body position "
+            "and camera framing, empty hands resting naturally, completely naked, "
+            "bare breasts, natural nipples and areolae, bare abdomen and navel, "
+            "exposed vulva, bare legs and bare feet, natural skin texture, "
+            "soft natural lighting, uncensored"
+        ),
+        "negative_prompt": NUDE_NEG,
+        "mask_target": "all_clothes",
+        "steps": 30, "cfg_scale": 7.0, "denoising_strength": 1.0,
+        "blend_mode": "raw", "preserve_limbs": True, "seed": 23,
+    },
+    # Undress con cfg alto segun la ficha del modelo (guidance 8.0)
+    "undress2": {
+        "prompt": (
+            "photorealistic fully nude woman, same seated pose, same body position "
+            "and camera framing, empty hands resting naturally, completely naked, "
+            "bare breasts, natural nipples and areolae, bare abdomen and navel, "
+            "exposed vulva, bare legs and bare feet, natural skin texture, "
+            "soft natural lighting, uncensored"
+        ),
+        "negative_prompt": NUDE_NEG,
+        "mask_target": "all_clothes",
+        "steps": 28, "cfg_scale": 7.0, "denoising_strength": 1.0,
+        "blend_mode": "raw", "preserve_limbs": True,
+        "control_scale": 0.0, "seed": 99,
+    },
+    # Igual que undress2 pero CON ControlNet (aisla la variable)
+    "undress3": {
+        "prompt": (
+            "photorealistic fully nude woman, same seated pose, same body position "
+            "and camera framing, empty hands resting naturally, completely naked, "
+            "bare breasts, natural nipples and areolae, bare abdomen and navel, "
+            "exposed vulva, bare legs and bare feet, natural skin texture, "
+            "soft natural lighting, uncensored"
+        ),
+        "negative_prompt": NUDE_NEG,
+        "mask_target": "all_clothes",
+        "steps": 28, "cfg_scale": 7.0, "denoising_strength": 1.0,
+        "blend_mode": "raw", "preserve_limbs": True,
+        "control_scale": 0.95, "seed": 99,
+    },
+    # Mismo seed 23 del test que fallo, pero con cfg 7 (aisla cfg vs seed)
+    "undress4": {
+        "prompt": (
+            "photorealistic fully nude woman, same seated pose, same body position "
+            "and camera framing, empty hands resting naturally, completely naked, "
+            "bare breasts, natural nipples and areolae, bare abdomen and navel, "
+            "exposed vulva, bare legs and bare feet, natural skin texture, "
+            "soft natural lighting, uncensored"
+        ),
+        "negative_prompt": NUDE_NEG,
+        "mask_target": "all_clothes",
+        "steps": 30, "cfg_scale": 7.0, "denoising_strength": 1.0,
+        "blend_mode": "raw", "preserve_limbs": True, "seed": 23,
+    },
+    # Otro seed cualquiera con cfg 7 y control por defecto
+    "undress5": {
+        "prompt": (
+            "photorealistic fully nude woman, same seated pose, same body position "
+            "and camera framing, empty hands resting naturally, completely naked, "
+            "bare breasts, natural nipples and areolae, bare abdomen and navel, "
+            "exposed vulva, bare legs and bare feet, natural skin texture, "
+            "soft natural lighting, uncensored"
+        ),
+        "negative_prompt": NUDE_NEG,
+        "mask_target": "all_clothes",
+        "steps": 30, "cfg_scale": 7.0, "denoising_strength": 1.0,
+        "blend_mode": "raw", "preserve_limbs": True, "seed": 7,
+    },
+    # Solo topless (mask_target upper_clothes si existe; si no, all_clothes)
+    "topless": {
+        "prompt": (
+            "photorealistic topless woman, bare breasts exposed, natural nipples, "
+            "same pose and framing, skirt and clothes below waist stay on, "
+            "natural skin texture, soft lighting, uncensored"
+        ),
+        "negative_prompt": NUDE_NEG,
+        "mask_target": "all_clothes",
+        "steps": 30, "cfg_scale": 7.0, "denoising_strength": 1.0,
+        "blend_mode": "raw", "preserve_limbs": True, "seed": 123,
+    },
+    # Undress con otro seed (123) para medir tasa de fallo
+    "undress6": {
+        "prompt": (
+            "photorealistic fully nude woman, same seated pose, same body position "
+            "and camera framing, empty hands resting naturally, completely naked, "
+            "bare breasts, natural nipples and areolae, bare abdomen and navel, "
+            "exposed vulva, bare legs and bare feet, natural skin texture, "
+            "soft natural lighting, uncensored"
+        ),
+        "negative_prompt": NUDE_NEG,
+        "mask_target": "all_clothes",
+        "steps": 30, "cfg_scale": 7.0, "denoising_strength": 1.0,
+        "blend_mode": "raw", "preserve_limbs": True, "seed": 123,
+    },
+    # Restauracion/mejora sin desnudar (mask_target enhance)
+    "enhance": {
+        "prompt": (
+            "photorealistic portrait, same woman, same clothes, same pose, "
+            "enhanced detail, sharp focus, natural skin texture, soft lighting"
+        ),
+        "negative_prompt": (
+            "blurry, lowres, worst quality, low quality, watermark, deformed"
+        ),
+        "mask_target": "enhance",
+        "steps": 28, "cfg_scale": 5.0, "denoising_strength": 0.45,
+        "seed": 11,
+    },
+    # Full body expand (equivalente a img-fullbody)
+    "fullbody": {
+        "prompt": (
+            "photorealistic fully nude woman, same face identity, same seated pose, "
+            "same hand near hair, empty hand, same thin necklace and jewelry, "
+            "completely naked, natural medium breasts, natural nipples and areolae, "
+            "long bare abdomen and navel, bare hips and upper thighs visible, "
+            "natural slim body proportions, realistic skin texture, "
+            "soft natural lighting, uncensored"
+        ),
+        "negative_prompt": NUDE_NEG + (
+            ", cropped body, cut off torso, missing hips, missing thighs, "
+            "missing legs, floating body, disconnected legs, extra person, cloned body"
+        ),
+        "mask_target": "full_body",
+        "steps": 32, "cfg_scale": 6.0, "denoising_strength": 1.0,
+        "blend_mode": "raw", "preserve_limbs": True,
+        "expand_body": True, "full_body": True,
+        "frame_scale": 0.62, "control_scale": 1.30,
+        "outpaint_steps": 30, "outpaint_control_scale": 1.35,
+        "seed": 42,
+    },
+}
+
+
+def post(url, data):
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(data).encode(),
+        headers={
+            "Content-Type": "application/json",
+            "Bypass-Tunnel-Reminder": "true",
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=60) as r:
+        return json.loads(r.read())
+
+
+def get(url):
+    with urllib.request.urlopen(url, timeout=60) as r:
+        return json.loads(r.read())
+
+
+def billing():
+    try:
+        return get(f"{API}/sdapi/v1/billing-status")
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def main():
+    name = sys.argv[1] if len(sys.argv) > 1 else "undress"
+    if name not in TESTS:
+        print("Tests:", ", ".join(TESTS))
+        sys.exit(1)
+
+    b = billing()
+    print(f"[billing] remaining=${b.get('remaining_usd')}")
+
+    with open(IMG_PATH, "rb") as f:
+        b64 = base64.b64encode(f.read()).decode()
+
+    cfg = TESTS[name]
+    payload = {
+        "prompt": cfg["prompt"],
+        "negative_prompt": cfg["negative_prompt"],
+        "steps": cfg["steps"],
+        "cfg_scale": cfg["cfg_scale"],
+        "lora_scale": 0.0,
+        "mask_target": cfg["mask_target"],
+        "skin_pre_adapt": False,
+        "width": 832,
+        "height": 1216,
+        "init_images": [f"data:image/jpeg;base64,{b64}"],
+        "image_engine": "urpm",
+    }
+    for k in ("denoising_strength", "blend_mode", "preserve_limbs", "seed",
+              "expand_body", "full_body", "frame_scale", "control_scale",
+              "outpaint_steps", "outpaint_control_scale"):
+        if k in cfg:
+            payload[k] = cfg[k]
+
+    print(f"[submit] {name} engine=urpm mask={cfg['mask_target']}")
+    t0 = time.time()
+    try:
+        res = post(f"{API}/sdapi/v1/job/submit", payload)
+    except Exception as e:
+        print("[submit error]", e)
+        sys.exit(1)
+    call_id = res.get("call_id")
+    print(f"[job] {call_id}")
+
+    while True:
+        time.sleep(5)
+        st = get(f"{API}/sdapi/v1/job/status/{call_id}")
+        status = st.get("status")
+        el = int(time.time() - t0)
+        print(f"[poll {el:4d}s] {status}", flush=True)
+        if status == "completed":
+            imgs = st.get("images") or []
+            img_b64 = imgs[0] if imgs else ""
+            if "," in img_b64:
+                img_b64 = img_b64.split(",", 1)[1]
+            out = f"{OUT_DIR}/test_urpm_{name}.png"
+            with open(out, "wb") as f:
+                f.write(base64.b64decode(img_b64))
+            print(f"[saved] {out}")
+            break
+        if status == "failed":
+            print("[failed]", st.get("error"))
+            break
+        if el > 900:
+            print("[timeout]")
+            break
+
+    b = billing()
+    print(f"[billing] remaining=${b.get('remaining_usd')} used=${b.get('used_usd')}")
+
+
+if __name__ == "__main__":
+    main()
