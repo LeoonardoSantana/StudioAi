@@ -207,10 +207,12 @@ TESTS = {
         "prompt": (
             "photorealistic fully nude woman, same face identity, same seated pose, "
             "same hand near hair, empty hand, same thin necklace and jewelry, "
-            "completely naked, full natural breasts, prominent puffy areolae "
-            "and nipples, long bare abdomen and navel, bare hips and upper "
-            "thighs visible, natural slim body proportions, warm golden skin "
-            "tone, detailed natural skin texture, soft natural lighting, uncensored"
+            "completely naked, full natural breasts, puffy areolae and nipples "
+            "in a muted rosy-brown tone matching her natural lip color, "
+            "long bare abdomen and navel, bare hips and upper thighs visible, "
+            "subtle natural pubic hair, natural slim body proportions, "
+            "warm golden skin tone, detailed natural skin texture, "
+            "soft natural lighting, uncensored"
         ),
         "negative_prompt": (
             "bad anatomy, extra limbs, extra fingers, missing fingers, "

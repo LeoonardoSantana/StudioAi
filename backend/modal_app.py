@@ -1908,8 +1908,9 @@ class ImageEngine:
             outpaint_prompt = (
                 "photorealistic fully nude woman, same face identity, "
                 "same seated upper-body pose, complete full body composition, "
-                "full natural breasts, defined areolae, bare abdomen and navel, "
-                "bare hips, thighs, knees and legs, "
+                "full natural breasts, areolae in a muted rosy-brown tone "
+                "matching her lip color, bare abdomen and navel, "
+                "bare hips, thighs, knees and legs, subtle natural pubic hair, "
                 "legs continuing naturally downward, same car interior and "
                 "background, seamless continuation, realistic skin texture, "
                 "soft natural lighting, uncensored"
