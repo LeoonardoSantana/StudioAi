@@ -76,7 +76,6 @@
             cfg: 5.0,
             denoise: 1.0,
             loraScale: 0.0,
-            seed: 23,
             themeColor: '#f59e0b'
         },
         {
@@ -103,7 +102,6 @@
             cfg: 6.0,
             denoise: 1.0,
             loraScale: 0.0,
-            seed: 42,
             themeColor: '#facc15'
         },
         {
@@ -124,7 +122,6 @@
             cfg: 5.5,
             denoise: 1.0,
             loraScale: 0.0,
-            seed: 23,
             themeColor: '#ec4899'
         },
         {
@@ -145,7 +142,6 @@
             cfg: 5.0,
             denoise: 1.0,
             loraScale: 0.0,
-            seed: 23,
             themeColor: '#8b5cf6'
         },
         {
@@ -166,7 +162,6 @@
             cfg: 5.0,
             denoise: 1.0,
             loraScale: 0.0,
-            seed: 23,
             themeColor: '#3b82f6'
         },
         {
@@ -187,7 +182,6 @@
             cfg: 6.0,
             denoise: 1.0,
             loraScale: 0.0,
-            seed: 23,
             themeColor: '#10b981'
         },
         {
@@ -207,7 +201,6 @@
             detailRestore: 0.50,
             colorRestore: 0.95,
             loraScale: 0.0,
-            seed: 23,
             themeColor: '#f97316'
         },
         // =====================================================================

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Pruebas del checkpoint alternativo URPM en Modal.
+"""Pruebas de generación de imagen en Modal (motor Lustify).
 
 Uso:
-    python3 tools/test_urpm_engine.py <nombre_prueba>
+    python3 tools/test_image_gen.py <nombre_prueba>
 
-Envia un trabajo a /sdapi/v1/job/submit con image_engine=urpm,
-hace polling hasta completar y guarda el PNG en pruebas/.
+Envia un trabajo a /sdapi/v1/job/submit, hace polling hasta
+completar y guarda el PNG en pruebas/.
 """
 import base64
 import json
@@ -210,7 +210,6 @@ def main():
         "width": 832,
         "height": 1216,
         "init_images": [f"data:image/jpeg;base64,{b64}"],
-        "image_engine": "urpm",
     }
     for k in ("denoising_strength", "blend_mode", "preserve_limbs", "seed",
               "expand_body", "full_body", "frame_scale", "control_scale",
@@ -218,7 +217,7 @@ def main():
         if k in cfg:
             payload[k] = cfg[k]
 
-    print(f"[submit] {name} engine=urpm mask={cfg['mask_target']}")
+    print(f"[submit] {name} mask={cfg['mask_target']}")
     t0 = time.time()
     try:
         res = post(f"{API}/sdapi/v1/job/submit", payload)

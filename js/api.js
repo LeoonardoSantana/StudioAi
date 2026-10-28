@@ -260,7 +260,6 @@
             controlScale,
             outpaintSteps,
             outpaintControlScale,
-            imageEngine,
             onSubmitted
         } = params;
 
@@ -337,8 +336,6 @@
         if (isVideo) {
             payload.is_video = true;
             payload.video_duration_seconds = videoDurationSeconds;
-        } else if (typeof imageEngine === 'string' && imageEngine) {
-            payload.image_engine = imageEngine;
         }
 
         try {
