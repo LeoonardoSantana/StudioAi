@@ -7,35 +7,25 @@
  */
 (function (global) {
     'use strict';
-
     const StudioAI = (global.StudioAI = global.StudioAI || {});
-
     const POSE_PRESERVE_NEGATIVE =
         'different pose, changed pose, altered body position, moved arms, moved legs, changed camera angle, zoomed crop, changed framing';
-
     const ANATOMY_NEGATIVE =
         'bad anatomy, extra limbs, extra fingers, missing fingers, deformed hands, distorted torso, extra breasts, bad nipples, cut arms, camera, phone, tripod, object in hands, holding object, device, prop, blurry, lowres, worst quality, low quality, watermark, signature';
-
     const DEFAULT_NEGATIVE_PROMPT = `${POSE_PRESERVE_NEGATIVE}, ${ANATOMY_NEGATIVE}`;
-
     const NUDE_NEGATIVE_PROMPT =
         `clothes, clothing, shirt, t-shirt, top, dress, pants, leggings, jeans, shoes, footwear, socks, bra, bikini, underwear, panties, fabric, sleeves, collar, waistband, covered breasts, covered nipples, covered legs, ${POSE_PRESERVE_NEGATIVE}, ${ANATOMY_NEGATIVE}`;
-
     const TOPLESS_NEGATIVE_PROMPT =
         `shirt, t-shirt, top, bra, bikini, bikini top, swimsuit, swimwear, straps, covered breasts, covered nipples, closed cleavage, ${POSE_PRESERVE_NEGATIVE}, ${ANATOMY_NEGATIVE}`;
-
     const ENHANCE_NEGATIVE_PROMPT =
         `different face, changed facial features, different person, changed identity, beautified face, face morph, changed body shape, changed pose, changed camera angle, altered background, new objects, camera, tripod, plastic skin, airbrushed, oversharpened, halo, cartoon, painting, illustration, grain, noise, jpeg artifacts, blur, overexposed, underexposed, watermark, text, signature`;
-
     const WAN_NEGATIVE_PROMPT =
         'lowres, blurry, overexposed, worst quality, low quality, deformed, distorted anatomy, morphing face, changing identity, extra limbs, extra fingers, repetitive motion, looping animation, identical repeated frames, frozen, motionless, sudden scene change, camera zoom, camera pan, moving background, watermark, text';
-
     const PRESET_EXAMPLE_BASE = 'assets/presets';
     const DEFAULT_EXAMPLE_BEFORE = [
         'assets/base/base_usuario',
         'pruebas/base_usuario'
     ];
-
     const QUALITY_PROFILES = {
         draft: {
             id: 'draft',
@@ -59,13 +49,11 @@
             hrScale: 1.0
         }
     };
-
     const VIDEO_DURATIONS = {
         5: { seconds: 5, fps: 16, frames: 80, estimatedGpuTime: '~45 seg (1 segmento Wan)' },
         10: { seconds: 10, fps: 16, frames: 160, estimatedGpuTime: '~90 seg (2 segmentos Wan)' },
         20: { seconds: 20, fps: 16, frames: 320, estimatedGpuTime: '~3 min (4 segmentos Wan)' }
     };
-
     const PRESETS = [
         // =====================================================================
         // 7 PRESETS DE FOTO CON LUSTIFY SDXL INPAINTING + CONTROLNET POSE
@@ -222,7 +210,6 @@
             seed: 23,
             themeColor: '#f97316'
         },
-
         // =====================================================================
         // 5 PRESETS DE VIDEO WAN 2.1 I2V CON LORAS REALES DE CIVITAI (CÁMARA FIJA)
         // =====================================================================
@@ -317,7 +304,6 @@
             motionStyle: 'breathing'
         }
     ];
-
     // =====================================================================
     // PRESETS EXTRA DE VIDEO (WAN 2.1 I2V) — GENERADOS DESDE LA BIBLIOTECA
     // DE LORAS DEL BACKEND. Formato compacto: se expanden con los defaults.
@@ -331,7 +317,6 @@
         denoise: 1.0,
         loraScale: 0.85
     };
-
     const EXTRA_VIDEO_PRESETS = [
         {
             id: 'vid-outfit-change', loraId: 'outfit_change',
@@ -381,31 +366,7 @@
             prompt: 'The woman lifts her top to reveal her bare breasts letting them drop naturally with realistic bounce. She smiles at the camera. Static camera, no zoom.',
             themeColor: '#6366f1', motionStyle: 'wind'
         },
-        {
-            id: 'vid-missionary', loraId: 'missionary_pov',
-            name: 'Misionero POV +18', badge: 'LoRA: Missionary I2V',
-            beforeDesc: 'Foto acostada o reclinada',
-            afterDesc: 'Sexo en misionero desde punto de vista en primera persona',
-            prompt: 'POV missionary sex, the woman lying back looking at the viewer with pleasure, rhythmic thrusting motion, her body rocking gently with each movement, moaning expression. Static camera POV, no zoom.',
-            themeColor: '#dc2626', motionStyle: 'loop'
-        },
-        {
-            id: 'vid-doggypov', loraId: 'doggypov',
-            name: 'Doggy POV +18', badge: 'LoRA: Doggy I2V',
-            beforeDesc: 'Foto de espaldas o en cuatro',
-            afterDesc: 'Sexo doggystyle en primera persona con vaivén rítmico',
-            prompt: 'POV doggystyle sex, view from behind the woman rocking back and forth rhythmically, hips moving with each thrust. Static camera POV, no zoom.',
-            themeColor: '#b45309', motionStyle: 'loop'
-        },
-        {
-            id: 'vid-front-doggy', loraId: 'front_doggy',
-            name: 'Doggy de Frente +18', badge: 'LoRA: Front Doggy',
-            beforeDesc: 'Foto en cuatro de frente',
-            afterDesc: 'Vaivén doggystyle visto de frente con balanceo de pecho',
-            prompt: 'The woman on all fours facing the camera, her breasts swinging back and forth with a rhythmic thrusting motion, pleasure expression. Static camera, no zoom.',
-            themeColor: '#f59e0b', motionStyle: 'loop'
-        },
-        {
+                                {
             id: 'vid-orgasm', loraId: 'orgasm_i2v',
             name: 'Orgasmo Intenso +18', badge: 'LoRA: Orgasm I2V',
             beforeDesc: 'Foto desnuda o en acto',
@@ -413,23 +374,7 @@
             prompt: 'The woman experiences an intense orgasm, her body trembling, back arching, moaning with an expression of pure ecstasy. Static camera, no zoom.',
             themeColor: '#e11d48', motionStyle: 'breathing'
         },
-        {
-            id: 'vid-doggy-front-t2v', loraId: 'doggystyle_front_t2v',
-            name: 'Doggy Frontal (v T2V) +18', badge: 'LoRA: Doggy Front T2V',
-            beforeDesc: 'Foto en cuatro',
-            afterDesc: 'Variante doggystyle frontal entrenada en T2V',
-            prompt: 'Doggystyle sex viewed from the front, the woman on all fours rocking rhythmically toward the camera, breasts swaying. Static camera, no zoom.',
-            themeColor: '#a855f7', motionStyle: 'loop'
-        },
-        {
-            id: 'vid-missionary-t2v', loraId: 'missionary_pov_t2v',
-            name: 'Misionero Alternativo +18', badge: 'LoRA: Missionary v2',
-            beforeDesc: 'Foto reclinada',
-            afterDesc: 'Variante de misionero entrenada en T2V',
-            prompt: 'Missionary sex, the woman lying on her back with legs spread, rhythmic motion, eyes locked with the viewer, pleasure expression. Static camera, no zoom.',
-            themeColor: '#be185d', motionStyle: 'loop'
-        },
-        {
+                        {
             id: 'vid-orgasm-t2v', loraId: 'orgasm_t2v',
             name: 'Orgasmo Alternativo +18', badge: 'LoRA: Orgasm v2 T2V',
             beforeDesc: 'Foto desnuda',
@@ -437,23 +382,7 @@
             prompt: 'Intense orgasm, the woman moaning loudly, body shaking with waves of pleasure, eyes rolling. Static camera, no zoom.',
             themeColor: '#9f1239', motionStyle: 'breathing'
         },
-        {
-            id: 'vid-cowgirl', loraId: 'cowgirl',
-            name: 'Cowgirl Encima +18', badge: 'LoRA: Cowgirl 480p',
-            beforeDesc: 'Foto de cuerpo completo',
-            afterDesc: 'Monta en posición cowgirl con rebote rítmico',
-            prompt: 'The woman riding in cowgirl position on top, bouncing up and down rhythmically, her breasts moving with each motion, moaning expression. Static camera, no zoom.',
-            themeColor: '#d97706', motionStyle: 'loop'
-        },
-        {
-            id: 'vid-pov-missionary', loraId: 'pov_missionary_i2v',
-            name: 'Misionero POV (kimjob) +18', badge: 'LoRA: POV Missionary',
-            beforeDesc: 'Foto acostada',
-            afterDesc: 'Variante de misionero POV de la colección kimjob',
-            prompt: 'POV missionary position sex, looking down at the woman lying back, deep rhythmic thrusting, her breasts moving with each push, moaning. Static camera POV, no zoom.',
-            themeColor: '#c2410c', motionStyle: 'loop'
-        },
-        {
+                        {
             id: 'vid-squirt', loraId: 'squirt_i2v',
             name: 'Squirting +18', badge: 'LoRA: Squirt I2V',
             beforeDesc: 'Foto desnuda',
@@ -477,31 +406,7 @@
             prompt: 'The woman pleasuring herself, hand between her legs fingering slowly, moaning with closed eyes, sensual solo motion. Static camera, no zoom.',
             themeColor: '#f472b6', motionStyle: 'breathing'
         },
-        {
-            id: 'vid-holdup', loraId: 'holdup',
-            name: 'Posición Alzada +18', badge: 'LoRA: Hold-up 480p',
-            beforeDesc: 'Foto de cuerpo completo',
-            afterDesc: 'Posición de pie alzada con piernas envueltas',
-            prompt: 'The woman held up in a standing carry position, legs wrapped, moving with rhythmic motion. Static camera, no zoom.',
-            themeColor: '#7c3aed', motionStyle: 'loop'
-        },
-        {
-            id: 'vid-anal', loraId: 'anal_insertion',
-            name: 'Inserción Anal +18', badge: 'LoRA: Anal 480p',
-            beforeDesc: 'Foto de espaldas',
-            afterDesc: 'Inserción anal en primer plano',
-            prompt: 'Slow anal insertion, the woman bent over, gradual penetration motion, pleasure and intensity on her face. Static camera, no zoom.',
-            themeColor: '#b91c1c', motionStyle: 'loop'
-        },
-        {
-            id: 'vid-pov-insertion', loraId: 'pov_insertion',
-            name: 'Inserción POV +18', badge: 'LoRA: POV Insertion',
-            beforeDesc: 'Foto en primer plano',
-            afterDesc: 'Penetración lenta en primera persona',
-            prompt: 'POV slow penetration insertion close-up, gradual thrusting motion, wet detail. Static camera POV, no zoom.',
-            themeColor: '#be123c', motionStyle: 'loop'
-        },
-        {
+                                {
             id: 'vid-flaccid', loraId: 'flaccid',
             name: 'Pene Flácido a Erecto +18', badge: 'LoRA: Flaccid 480p',
             beforeDesc: 'Foto con pareja o modelo',
@@ -509,15 +414,7 @@
             prompt: 'A flaccid penis gradually becoming erect, natural transition. Static camera, no zoom.',
             themeColor: '#94a3b8', motionStyle: 'breathing'
         },
-        {
-            id: 'vid-cumshot', loraId: 'cumshot',
-            name: 'Cumshot Final +18', badge: 'LoRA: Cumshot I2V',
-            beforeDesc: 'Foto del acto o del rostro',
-            afterDesc: 'Termina en eyaculación visible',
-            prompt: 'Cumshot finish, ejaculation onto the woman, she smiles with pleasure. Static camera, no zoom.',
-            themeColor: '#fde047', motionStyle: 'loop'
-        },
-        {
+                {
             id: 'vid-solo-fem', loraId: 'female_masturbation',
             name: 'Masturbación Femenina +18', badge: 'LoRA: Solo Female',
             beforeDesc: 'Foto desnuda o reclinada',
@@ -525,39 +422,7 @@
             prompt: 'The woman masturbating alone, fingers circling between her legs, hips moving, eyes half closed with pleasure. Static camera, no zoom.',
             themeColor: '#f0abfc', motionStyle: 'breathing'
         },
-        {
-            id: 'vid-kissing', loraId: 'kissing',
-            name: 'Beso Apasionado', badge: 'LoRA: Kissing',
-            beforeDesc: 'Foto con dos personas o pareja',
-            afterDesc: 'Beso francés intenso y apasionado',
-            prompt: 'Passionate deep french kissing, tongues touching, intense intimate kiss, heads moving slightly. Static camera, no zoom.',
-            themeColor: '#fb7185', motionStyle: 'breathing'
-        },
-        {
-            id: 'vid-spanking', loraId: 'spanking',
-            name: 'Nalgadas +18', badge: 'LoRA: Spanking',
-            beforeDesc: 'Foto de espaldas o inclinada',
-            afterDesc: 'Nalgadas con rebote de piel',
-            prompt: 'Spanking motion, hand slapping her bare butt, skin rippling with each spank, she reacts with pleasure. Static camera, no zoom.',
-            themeColor: '#ef4444', motionStyle: 'loop'
-        },
-        {
-            id: 'vid-standing-doggy', loraId: 'standing_doggy',
-            name: 'Doggy de Pie +18', badge: 'LoRA: Standing Doggy',
-            beforeDesc: 'Foto de pie inclinada',
-            afterDesc: 'Sexo de pie por detrás',
-            prompt: 'Standing doggystyle sex, the woman bent forward standing while being taken from behind, rhythmic thrusting, breasts swinging. Static camera, no zoom.',
-            themeColor: '#ea580c', motionStyle: 'loop'
-        },
-        {
-            id: 'vid-sex-machine', loraId: 'sex_machine',
-            name: 'Máquina de Sexo +18', badge: 'LoRA: Sex Machine',
-            beforeDesc: 'Foto reclinada o de espaldas',
-            afterDesc: 'Penetrada por una máquina automática',
-            prompt: 'The woman being penetrated by a mechanical sex machine, rhythmic automatic thrusting, her body shaking with each pump. Static camera, no zoom.',
-            themeColor: '#64748b', motionStyle: 'loop'
-        },
-        {
+                                        {
             id: 'vid-squirt-shura', loraId: 'squirt_shura',
             name: 'Squirting (shura) +18', badge: 'LoRA: Squirt v2',
             beforeDesc: 'Foto desnuda',
@@ -581,15 +446,7 @@
             prompt: 'The woman fingering herself anally, slow insertion motion, pleasure expression. Static camera, no zoom.',
             themeColor: '#a16207', motionStyle: 'breathing'
         },
-        {
-            id: 'vid-titfuck', loraId: 'titfuck',
-            name: 'Paja con Pechos +18', badge: 'LoRA: Titfuck',
-            beforeDesc: 'Foto con pecho descubierto',
-            afterDesc: 'Paizuri: aprieta el pecho alrededor del pene',
-            prompt: 'Titfuck paizuri, the woman squeezing her large breasts around a penis, moving them up and down. Static camera, no zoom.',
-            themeColor: '#f9a8d4', motionStyle: 'loop'
-        },
-        {
+                {
             id: 'vid-hand-panties', loraId: 'hand_panties',
             name: 'Mano en las Bragas +18', badge: 'LoRA: Hand in Panties',
             beforeDesc: 'Foto con bragas visibles',
@@ -597,39 +454,7 @@
             prompt: 'The woman sliding her hand inside her panties, touching herself, subtle sensual motion, biting her lip. Static camera, no zoom.',
             themeColor: '#e879f9', motionStyle: 'breathing'
         },
-        {
-            id: 'vid-pov-handjob', loraId: 'pov_handjob',
-            name: 'Paja POV +18', badge: 'LoRA: POV Handjob',
-            beforeDesc: 'Foto en primera persona',
-            afterDesc: 'Masturbación con la mano en POV',
-            prompt: 'POV handjob, her hand stroking a penis up and down in first person view, looking up at the viewer. Static camera POV, no zoom.',
-            themeColor: '#fda4af', motionStyle: 'loop'
-        },
-        {
-            id: 'vid-deepthroat', loraId: 'deepthroat',
-            name: 'Garganta Profunda +18', badge: 'LoRA: Deepthroat',
-            beforeDesc: 'Foto de rostro o boca',
-            afterDesc: 'Felación profunda',
-            prompt: 'Deepthroat blowjob, taking the penis deep into her mouth and throat, bobbing head motion. Static camera, no zoom.',
-            themeColor: '#f87171', motionStyle: 'loop'
-        },
-        {
-            id: 'vid-ult-deepthroat', loraId: 'ult_deepthroat',
-            name: 'Garganta Profunda Extrema +18', badge: 'LoRA: Ult. Deepthroat',
-            beforeDesc: 'Foto de rostro',
-            afterDesc: 'Variante extrema de felación profunda',
-            prompt: 'Intense deepthroat, full throat penetration with long strokes, saliva detail. Static camera, no zoom.',
-            themeColor: '#dc2626', motionStyle: 'loop'
-        },
-        {
-            id: 'vid-fullnelson', loraId: 'fullnelson',
-            name: 'Full Nelson +18', badge: 'LoRA: Full Nelson',
-            beforeDesc: 'Foto de cuerpo completo',
-            afterDesc: 'Posición full nelson alzada por detrás',
-            prompt: 'Full nelson sex position, the woman held up from behind with arms locked, body bouncing with thrusts. Static camera, no zoom.',
-            themeColor: '#7f1d1d', motionStyle: 'loop'
-        },
-        {
+                                        {
             id: 'vid-ahegao', loraId: 'ahegao',
             name: 'Cara Ahegao +18', badge: 'LoRA: Ahegao',
             beforeDesc: 'Foto de rostro',
@@ -637,39 +462,7 @@
             prompt: 'Ahegao face, eyes rolling back, tongue sticking out, expression of overwhelming pleasure. Static camera, no zoom.',
             themeColor: '#c084fc', motionStyle: 'breathing'
         },
-        {
-            id: 'vid-nipple-suck', loraId: 'nipple_suck',
-            name: 'Chupar Pezones +18', badge: 'LoRA: Nipple Suck',
-            beforeDesc: 'Foto con pecho descubierto',
-            afterDesc: 'Succión de pezones en primer plano',
-            prompt: 'Nipple sucking, a mouth licking and sucking her nipple, close-up, breast held gently. Static camera, no zoom.',
-            themeColor: '#fbb6ce', motionStyle: 'breathing'
-        },
-        {
-            id: 'vid-cunnilingus', loraId: 'cunnilingus',
-            name: 'Cunnilingus +18', badge: 'LoRA: Cunnilingus',
-            beforeDesc: 'Foto acostada con piernas abiertas',
-            afterDesc: 'Sexo oral sobre ella',
-            prompt: 'Cunnilingus oral sex, tongue licking between her legs, she arches with pleasure. Static camera, no zoom.',
-            themeColor: '#fb923c', motionStyle: 'breathing'
-        },
-        {
-            id: 'vid-dildo-ride', loraId: 'dildo_ride',
-            name: 'Montar Dildo +18', badge: 'LoRA: Dildo Ride',
-            beforeDesc: 'Foto agachada o sentada',
-            afterDesc: 'Monta un consolador con vaivén',
-            prompt: 'The woman riding a dildo, moving her hips up and down in a steady rhythm, moaning. Static camera, no zoom.',
-            themeColor: '#a21caf', motionStyle: 'loop'
-        },
-        {
-            id: 'vid-mast-cum', loraId: 'masturbation_cumshot',
-            name: 'Paja + Corrida +18', badge: 'LoRA: Stroke & Cum',
-            beforeDesc: 'Foto con pareja o modelo',
-            afterDesc: 'Masturbación terminando en eyaculación',
-            prompt: 'Hand stroking the penis fast until cumshot, ejaculation finish. Static camera, no zoom.',
-            themeColor: '#fef08a', motionStyle: 'loop'
-        },
-        {
+                                        {
             id: 'vid-two-fingers', loraId: 'two_fingers',
             name: 'Dos Dedos +18', badge: 'LoRA: Two Fingers',
             beforeDesc: 'Foto desnuda',
@@ -717,15 +510,7 @@
             prompt: 'The woman bending forward repeatedly, her breasts bouncing with each bend, playful motion. Static camera, no zoom.',
             themeColor: '#34d399', motionStyle: 'loop'
         },
-        {
-            id: 'vid-slap', loraId: 'slap',
-            name: 'Bofetadas +18', badge: 'LoRA: Slap',
-            beforeDesc: 'Foto de rostro o pecho',
-            afterDesc: 'Bofetadas suaves con reacción',
-            prompt: 'Slapping motion, hand slapping her cheek or breasts, she reacts with a moan. Static camera, no zoom.',
-            themeColor: '#f43f5e', motionStyle: 'loop'
-        },
-        {
+                {
             id: 'vid-hand-panties-v3', loraId: 'hand_panties_v3',
             name: 'Mano en Bragas v3 +18', badge: 'LoRA: Panties v3',
             beforeDesc: 'Foto con bragas',
@@ -741,15 +526,7 @@
             prompt: 'The woman leans toward the camera and kisses the lens, blowing a kiss, lips close-up. Static camera, no zoom.',
             themeColor: '#f87171', motionStyle: 'breathing'
         },
-        {
-            id: 'vid-dreamjob', loraId: 'dr34mj0b',
-            name: 'Felación Dreamjob +18', badge: 'LoRA: DR34MJ0B',
-            beforeDesc: 'Foto de rostro o boca',
-            afterDesc: 'Felación suave estilo dreamjob',
-            prompt: 'Slow sensual blowjob, lips sliding up and down the shaft, eye contact with the viewer. Static camera, no zoom.',
-            themeColor: '#818cf8', motionStyle: 'loop'
-        },
-        {
+                {
             id: 'vid-innie', loraId: 'innie_pussy_t2v',
             name: 'Primer Plano Íntimo +18', badge: 'LoRA: Innie T2V',
             beforeDesc: 'Foto con piernas abiertas',
@@ -758,13 +535,11 @@
             themeColor: '#fbcfe8', motionStyle: 'breathing'
         }
     ];
-
     EXTRA_VIDEO_PRESETS.forEach((cfg, idx) => {
         PRESETS.push(Object.assign({}, VIDEO_LORA_DEFAULTS, cfg, {
             name: `${13 + idx}. ${cfg.name}`
         }));
     });
-
     // Preset final totalmente personalizable (prompt libre + LoRA a elección)
     PRESETS.push(Object.assign({}, VIDEO_LORA_DEFAULTS, {
         id: 'vid-custom',
@@ -778,7 +553,6 @@
         themeColor: '#facc15',
         motionStyle: 'breathing'
     }));
-
     // =====================================================================
     // DESCRIPCIONES, CONSEJOS DE POSE Y CLASIFICACIÓN POR TIPO DE ENTRADA
     // inputType: 'undress' (acepta ropa y genera desnudo),
@@ -870,50 +644,15 @@
             tips: 'Blusa cubriendo el pecho; encuadre de cintura hacia arriba.',
             inputType: 'undress', previewLink: 'https://drive.google.com/file/d/1x7Rp21I8IOWBnQs4gryV4OTR8_qX3iOI/preview'
         },
-        'vid-missionary': {
-            desc: 'Sexo en misionero visto en primera persona con vaivén rítmico.',
-            tips: 'Requiere foto acostada con piernas abiertas y, idealmente, pareja encima; el modelo no inventa personas.',
-            inputType: 'nude'
-        },
-        'vid-doggypov': {
-            desc: 'Sexo por detrás en primera persona con vaivén de caderas.',
-            tips: 'Requiere foto de espaldas o en cuatro, idealmente con pareja detrás.',
-            inputType: 'nude'
-        },
-        'vid-front-doggy': {
-            desc: 'Vaivén en posición de cuatro visto desde el frente.',
-            tips: 'Requiere foto en cuatro de frente; sin esa pose solo anima movimiento leve.',
-            inputType: 'nude'
-        },
         'vid-orgasm': {
             desc: 'Orgasmo intenso con temblor corporal y expresión de éxtasis.',
             tips: 'Funciona mejor con foto desnuda en el acto; con ropa solo simula expresión.',
             inputType: 'nude', previewLink: 'https://drive.google.com/file/d/1LneGZ9RXRiATFi77z_o8AAyeUk_pl_X6/preview'
         },
-        'vid-doggy-front-t2v': {
-            desc: 'Variante de doggystyle frontal (entrenado en T2V).',
-            tips: 'Requiere la pose en cuatro ya visible en la foto.',
-            inputType: 'nude'
-        },
-        'vid-missionary-t2v': {
-            desc: 'Variante de misionero (entrenado en T2V).',
-            tips: 'Requiere la pose de misionero ya en la foto.',
-            inputType: 'nude'
-        },
         'vid-orgasm-t2v': {
             desc: 'Variante de orgasmo (entrenado en T2V).',
             tips: 'Funciona mejor con foto desnuda en el acto.',
             inputType: 'nude', previewLink: 'https://drive.google.com/file/d/1SGcxZtJELpwXgL73aenByd_Lw346N0R_/preview'
-        },
-        'vid-cowgirl': {
-            desc: 'Monta encima en posición cowgirl rebotando rítmicamente.',
-            tips: 'Requiere foto donde ella ya esté encima de alguien o sentada en posición de montar; sin pareja visible solo hará movimiento genérico.',
-            inputType: 'nude', previewLink: 'https://drive.google.com/file/d/1UW5Mgou0dNG8aSwTxb2iyjL8mpybik-4/preview'
-        },
-        'vid-pov-missionary': {
-            desc: 'Misionero POV de la colección kimjob con embestidas profundas.',
-            tips: 'Igual que misionero: necesita la pose acostada con piernas abiertas ya en la foto.',
-            inputType: 'nude'
         },
         'vid-squirt': {
             desc: 'Eyaculación femenina visible durante el clímax.',
@@ -930,55 +669,15 @@
             tips: 'Funciona mejor con mano cerca o dentro ya en la foto.',
             inputType: 'nude', previewLink: 'https://drive.google.com/file/d/1OIzKPuzDFfXE8jcoUVW73B6guGfee2DA/preview'
         },
-        'vid-holdup': {
-            desc: 'Posición de pie alzada con piernas envueltas.',
-            tips: 'Requiere foto con pareja o posición alzada ya sugerida.',
-            inputType: 'nude'
-        },
-        'vid-anal': {
-            desc: 'Inserción anal lenta y progresiva.',
-            tips: 'Requiere foto de espaldas inclinada con nalgas visibles, idealmente con pareja.',
-            inputType: 'nude'
-        },
-        'vid-pov-insertion': {
-            desc: 'Penetración lenta en primera persona a primer plano.',
-            tips: 'Requiere la zona pélvica a primer plano ya visible.',
-            inputType: 'nude'
-        },
         'vid-flaccid': {
             desc: 'El pene pasa de flácido a completamente erecto.',
             tips: 'Requiere pene visible.',
-            inputType: 'nude'
-        },
-        'vid-cumshot': {
-            desc: 'Finaliza con eyaculación visible sobre el cuerpo o rostro.',
-            tips: 'Requiere el acto en curso o el objetivo visible en la foto.',
             inputType: 'nude'
         },
         'vid-solo-fem': {
             desc: 'Se masturba sola moviendo las caderas hasta el clímax.',
             tips: 'Funciona mejor con foto desnuda con la mano en la entrepierna.',
             inputType: 'nude', previewLink: 'https://drive.google.com/file/d/1TjA48qH_jdeyiU2Kjocc2NAjZDxaS9JD/preview'
-        },
-        'vid-kissing': {
-            desc: 'Beso francés profundo y apasionado.',
-            tips: 'Requiere dos personas/rostro cercanos ya en la foto.',
-            inputType: 'any'
-        },
-        'vid-spanking': {
-            desc: 'Nalgadas repetidas con rebote de piel en cada golpe.',
-            tips: 'Requiere nalgas visibles, mejor desnudas.',
-            inputType: 'nude'
-        },
-        'vid-standing-doggy': {
-            desc: 'Sexo de pie penetrando por detrás.',
-            tips: 'Requiere foto de pie inclinada o con pareja detrás.',
-            inputType: 'nude'
-        },
-        'vid-sex-machine': {
-            desc: 'Una máquina automática la penetra rítmicamente.',
-            tips: 'Requiere la zona pélvica visible y posición compatible.',
-            inputType: 'nude'
         },
         'vid-squirt-shura': {
             desc: 'Variante alternativa de squirting (estilo shura).',
@@ -995,60 +694,15 @@
             tips: 'Requiere nalgas o zona anal visible.',
             inputType: 'nude'
         },
-        'vid-titfuck': {
-            desc: 'Aprieta sus pechos alrededor de un pene (paizuri).',
-            tips: 'Requiere pecho desnudo y pene entre o cerca de los pechos ya en la foto.',
-            inputType: 'nude'
-        },
         'vid-hand-panties': {
             desc: 'Desliza su mano dentro de las bragas para tocarse.',
             tips: 'Requiere bragas visibles con la mano cerca.',
             inputType: 'nude', previewLink: 'https://drive.google.com/file/d/1fwxZuEfeQp_4RxTPgDbLZs0UG27OTPLr/preview'
         },
-        'vid-pov-handjob': {
-            desc: 'Masturba un pene con la mano en primera persona.',
-            tips: 'Requiere mano y pene ya en la foto en primer plano.',
-            inputType: 'nude'
-        },
-        'vid-deepthroat': {
-            desc: 'Felación profunda con movimiento de cabeza.',
-            tips: 'Requiere rostro con pene cerca o en la boca ya en la foto.',
-            inputType: 'nude'
-        },
-        'vid-ult-deepthroat': {
-            desc: 'Variante extrema de felación profunda.',
-            tips: 'Requiere rostro con pene cerca o en la boca ya en la foto.',
-            inputType: 'nude'
-        },
-        'vid-fullnelson': {
-            desc: 'La alzan por detrás en posición full nelson.',
-            tips: 'Requiere foto donde ya la estén sosteniendo por detrás; sin pareja no compone la posición.',
-            inputType: 'nude'
-        },
         'vid-ahegao': {
             desc: 'Cara de placer extremo: ojos en blanco y lengua fuera.',
             tips: 'Primer plano del rostro.',
             inputType: 'any', previewLink: 'https://drive.google.com/file/d/1hJ7snpemE2m2QDqtap0irIobGpi_v5e6/preview'
-        },
-        'vid-nipple-suck': {
-            desc: 'Una boca chupa y lame su pezón a primer plano.',
-            tips: 'Requiere pecho desnudo a primer plano.',
-            inputType: 'nude'
-        },
-        'vid-cunnilingus': {
-            desc: 'Recibe sexo oral con arqueo de placer.',
-            tips: 'Requiere foto acostada con piernas abiertas y pareja o la zona visible.',
-            inputType: 'nude'
-        },
-        'vid-dildo-ride': {
-            desc: 'Monta un consolador moviendo las caderas.',
-            tips: 'Requiere foto sentada o agachada con consolador o posición de montar.',
-            inputType: 'nude'
-        },
-        'vid-mast-cum': {
-            desc: 'Paja rápida que termina en eyaculación.',
-            tips: 'Requiere pene visible o el acto ya en la foto.',
-            inputType: 'nude'
         },
         'vid-two-fingers': {
             desc: 'Penetración con dos dedos, detalle húmedo.',
@@ -1080,11 +734,6 @@
             tips: 'De pie de frente; mejor topless o desnuda.',
             inputType: 'any', previewLink: 'https://drive.google.com/file/d/17GbDuD7PjyaTiynbaW762ADBttUOKRXv/preview'
         },
-        'vid-slap': {
-            desc: 'Bofetadas suaves en rostro o pecho con reacción.',
-            tips: 'Funciona mejor con foto que ya sugiera el acto.',
-            inputType: 'nude'
-        },
         'vid-hand-panties-v3': {
             desc: 'Variante v3 de mano dentro de las bragas.',
             tips: 'Requiere bragas visibles con la mano cerca.',
@@ -1094,11 +743,6 @@
             desc: 'Se acerca y besa directamente la lente.',
             tips: 'Rostro cerca de la cámara, bien enfocado.',
             inputType: 'any', previewLink: 'https://drive.google.com/file/d/1eez-pa7pAPQYyhCd5iV5MtBuAlPpAKs-/preview'
-        },
-        'vid-dreamjob': {
-            desc: 'Felación suave con contacto visual al espectador.',
-            tips: 'Requiere rostro con pene cerca ya en la foto.',
-            inputType: 'nude'
         },
         'vid-innie': {
             desc: 'Primer plano detallado de la vulva.',
@@ -1111,7 +755,6 @@
             inputType: 'any'
         }
     };
-
     PRESETS.forEach((preset) => {
         const extra = PRESET_DETAILS[preset.id];
         if (extra) Object.assign(preset, extra);
@@ -1120,50 +763,12 @@
         preset.exampleBefore = `${presetDir}/before`;
         preset.exampleAfter = `${presetDir}/after`;
     });
-
-    // Presets ocultos: requieren que la foto ya contenga la pareja o la
-    // posición exacta del acto — Wan I2V no compone la escena y solo
-    // produciría movimiento genérico (gasto de crédito sin resultado).
-    // Para reactivar alguno basta quitar su id de este conjunto.
-    const DISABLED_PRESETS = new Set([
-        'vid-cowgirl',
-        'vid-missionary',
-        'vid-pov-missionary',
-        'vid-missionary-t2v',
-        'vid-doggypov',
-        'vid-front-doggy',
-        'vid-doggy-front-t2v',
-        'vid-standing-doggy',
-        'vid-fullnelson',
-        'vid-holdup',
-        'vid-titfuck',
-        'vid-pov-handjob',
-        'vid-deepthroat',
-        'vid-ult-deepthroat',
-        'vid-dreamjob',
-        'vid-cunnilingus',
-        'vid-nipple-suck',
-        'vid-kissing',
-        'vid-anal',
-        'vid-pov-insertion',
-        'vid-cumshot',
-        'vid-mast-cum',
-        'vid-spanking',
-        'vid-slap',
-        'vid-sex-machine',
-        'vid-dildo-ride'
-    ]);
-
-    const ACTIVE_PRESETS = PRESETS.filter(
-        (p) => !DISABLED_PRESETS.has(p.id)
-    );
-
     StudioAI.Config = {
         DEFAULT_NEGATIVE_PROMPT,
         DEFAULT_EXAMPLE_BEFORE,
         QUALITY_PROFILES,
         VIDEO_DURATIONS,
-        PRESETS: ACTIVE_PRESETS,
+        PRESETS,
         getPresetById(id) {
             return PRESETS.find((p) => p.id === id) || null;
         }
