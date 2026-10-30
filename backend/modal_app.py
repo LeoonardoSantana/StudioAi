@@ -418,7 +418,7 @@ def get_sdxl_native_dimensions(w: int, h: int) -> tuple[int, int]:
 # MOTOR 1: INPAINTING 9-CANALES CON PROTECCIÓN DE BRAZOS, PIERNAS Y FONDO
 # =====================================================================
 @app.cls(
-    gpu="A100-80GB",
+    gpu="L40S",
     scaledown_window=60,
     timeout=300,
 )
@@ -2882,6 +2882,36 @@ class VideoEngine:
         )
         return seq[min(max(chunk_index - 1, 0), len(seq) - 1)]
 
+    def _activate_lora(self, lora_id, scale):
+        if self.current_loaded_lora != lora_id:
+            try:
+                self.pipe.unload_lora_weights()
+            except Exception:
+                pass
+            self.current_loaded_lora = None
+            lpath = (
+                self._ensure_lora_path(lora_id) if lora_id else None
+            )
+            if lpath and os.path.exists(lpath):
+                try:
+                    self.pipe.load_lora_weights(
+                        lpath, adapter_name=lora_id
+                    )
+                    self.pipe.set_adapters(
+                        [lora_id], adapter_weights=[scale]
+                    )
+                    self.current_loaded_lora = lora_id
+                except Exception as e:
+                    print(f"Civitai LoRA warn: {e}")
+                    self.current_loaded_lora = None
+        if lora_id and self.current_loaded_lora == lora_id:
+            try:
+                self.pipe.set_adapters(
+                    [lora_id], adapter_weights=[scale]
+                )
+            except Exception as e:
+                print(f"LoRA scale warn: {e}")
+
     @modal.method()
     def generate_video(self, payload: dict) -> str:
         import numpy as np
@@ -2982,42 +3012,17 @@ class VideoEngine:
         lora_scale = max(
             0.0, min(1.0, float(payload.get("lora_scale") or 0.85))
         )
-
-        if self.current_loaded_lora != chosen_lora:
-            try:
-                self.pipe.unload_lora_weights()
-            except Exception:
-                pass
-            self.current_loaded_lora = None
-            lpath = (
-                self._ensure_lora_path(chosen_lora)
-                if chosen_lora
-                else None
-            )
-            if lpath and os.path.exists(lpath):
-                try:
-                    self.pipe.load_lora_weights(
-                        lpath, adapter_name=chosen_lora
-                    )
-                    self.pipe.set_adapters(
-                        [chosen_lora], adapter_weights=[lora_scale]
-                    )
-                    self.current_loaded_lora = chosen_lora
-                except Exception as e:
-                    print(f"Civitai LoRA warn: {e}")
-                    self.current_loaded_lora = None
-
-        if chosen_lora and self.current_loaded_lora == chosen_lora:
-            try:
-                self.pipe.set_adapters(
-                    [chosen_lora], adapter_weights=[lora_scale]
-                )
-            except Exception as e:
-                print(f"LoRA scale warn: {e}")
+        chain_steps = payload.get("chain") or []
+        if not chain_steps:
+            self._activate_lora(chosen_lora, lora_scale)
 
         req_seconds = int(payload.get("video_duration_seconds", 5))
-        req_seconds = 20 if req_seconds >= 20 else 10 if req_seconds >= 10 else 5
-        chunks_needed = {5: 1, 10: 2, 20: 4}[req_seconds]
+        if chain_steps:
+            chunks_needed = len(chain_steps)
+            req_seconds = 5 * chunks_needed
+        else:
+            req_seconds = 20 if req_seconds >= 20 else 10 if req_seconds >= 10 else 5
+            chunks_needed = {5: 1, 10: 2, 20: 4}[req_seconds]
         video_steps = max(4, min(10, int(payload.get("steps") or 6)))
         video_cfg = max(
             1.0, min(4.0, float(payload.get("cfg_scale") or 1.0))
@@ -3029,46 +3034,89 @@ class VideoEngine:
         condition_img = img
         with torch.inference_mode():
             for chunk_idx in range(chunks_needed):
-                if chunk_idx == 0:
-                    chunk_prompt = prompt
-                else:
-                    if face_mode == "body_only":
-                        chunk_prompt = self._body_only_continuation_prompt(
-                            chosen_lora, chunk_idx
-                        )
-                    else:
-                        chunk_prompt = self._continuation_prompt(
-                            chosen_lora, chunk_idx, chunks_needed
-                        )
-                        if face_mode == "face_reference":
-                            chunk_prompt = self._sanitize_face_reference_prompt(
+                if chain_steps:
+                    step_cfg = chain_steps[chunk_idx]
+                    step_lora = step_cfg.get("lora_id") or step_cfg.get(
+                        "loraId"
+                    )
+                    step_lora_scale = max(
+                        0.0,
+                        min(
+                            1.0,
+                            float(
+                                step_cfg.get(
+                                    "lora_scale",
+                                    step_cfg.get("loraScale", lora_scale),
+                                )
+                            ),
+                        ),
+                    )
+                    self._activate_lora(step_lora, step_lora_scale)
+                    chosen_lora = step_lora
+                    chunk_prompt = step_cfg.get("prompt") or prompt
+                    if face_mode == "face_reference":
+                        chunk_prompt = (
+                            self._sanitize_face_reference_prompt(
                                 chunk_prompt
                             )
-                            chunk_prompt += (
-                                ", preserve the same reference face identity"
-                            )
-                chunk_lora_scale = 0.0
-                if self.current_loaded_lora == chosen_lora:
-                    transition_loras = {"str1p", "tittydrop", "clothes_on_off"}
-                    if face_mode == "body_only":
-                        chunk_lora_scale = min(lora_scale, 0.25)
+                            + ", preserve the reference face identity, "
+                            + "same facial features, no invented face"
+                        )
+                    elif face_mode == "body_only":
+                        chunk_prompt = (
+                            self._sanitize_body_only_prompt(chunk_prompt)
+                            + ", keep the exact initial camera framing and "
+                            + "head position, animate only torso, body, "
+                            + "arms and legs, do not add new facial features "
+                            + "or change the visible face region"
+                        )
+                    chunk_lora_scale = step_lora_scale
+                else:
+                    if chunk_idx == 0:
+                        chunk_prompt = prompt
                     else:
-                        chunk_lora_scale = (
-                            lora_scale
-                            if chunk_idx == 0
-                            else (
-                                0.35
-                                if chosen_lora in transition_loras
-                                else min(lora_scale, 0.65)
+                        if face_mode == "body_only":
+                            chunk_prompt = self._body_only_continuation_prompt(
+                                chosen_lora, chunk_idx
                             )
-                        )
-                    try:
-                        self.pipe.set_adapters(
-                            [chosen_lora],
-                            adapter_weights=[chunk_lora_scale],
-                        )
-                    except Exception as e:
-                        print(f"LoRA chunk scale warn: {e}")
+                        else:
+                            chunk_prompt = self._continuation_prompt(
+                                chosen_lora, chunk_idx, chunks_needed
+                            )
+                            if face_mode == "face_reference":
+                                chunk_prompt = (
+                                    self._sanitize_face_reference_prompt(
+                                        chunk_prompt
+                                    )
+                                )
+                                chunk_prompt += (
+                                    ", preserve the same reference "
+                                    "face identity"
+                                )
+                    chunk_lora_scale = 0.0
+                    if self.current_loaded_lora == chosen_lora:
+                        transition_loras = {
+                            "str1p", "tittydrop", "clothes_on_off"
+                        }
+                        if face_mode == "body_only":
+                            chunk_lora_scale = min(lora_scale, 0.25)
+                        else:
+                            chunk_lora_scale = (
+                                lora_scale
+                                if chunk_idx == 0
+                                else (
+                                    0.35
+                                    if chosen_lora in transition_loras
+                                    else min(lora_scale, 0.65)
+                                )
+                            )
+                        try:
+                            self.pipe.set_adapters(
+                                [chosen_lora],
+                                adapter_weights=[chunk_lora_scale],
+                            )
+                        except Exception as e:
+                            print(f"LoRA chunk scale warn: {e}")
                 raw_frames = list(
                     self.pipe(
                         image=condition_img,
@@ -3102,6 +3150,9 @@ class VideoEngine:
                     chosen_lora,
                     "lora_scale=",
                     chunk_lora_scale,
+                    "chain_step=",
+                    chunk_idx,
+                    "chain" if chain_steps else "single",
                 )
                 torch.cuda.empty_cache()
 

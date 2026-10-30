@@ -13,6 +13,7 @@
         currentMode: 'img2img',
         videoDurationSeconds: 5,
         base64UploadedImage: null,
+        uploadedImages: [],
         base64FaceImage: null,
         uploadedImgWidth: 768,
         uploadedImgHeight: 768,
@@ -25,6 +26,7 @@
         lastGeneratedResultUrl: null,
         lastGeneratedMediaType: 'image',
         isGenerating: false,
+        generationQueue: [],
         isCheckingServer: false,
         isCheckingBilling: false,
         billingCheckPromise: null,
@@ -798,6 +800,11 @@
         }
 
         state.base64UploadedImage = state.lastGeneratedResultUrl;
+        state.uploadedImages = [{
+            dataUrl: state.lastGeneratedResultUrl,
+            width: state.uploadedImgWidth,
+            height: state.uploadedImgHeight
+        }];
         const img = document.getElementById('uploadedPreview');
         const placeholder = document.getElementById('uploadPlaceholder');
         const btnRemove = document.getElementById('btnRemoveUpload');
@@ -815,53 +822,77 @@
         );
     }
 
-    function processImageFile(file) {
-        if (!file) return;
-        if (!file.type || !file.type.startsWith('image/')) {
+    function readFileAsDataUrl(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(file);
+        });
+    }
+
+    async function processImageFiles(fileList) {
+        const files = Array.from(fileList || []).filter(
+            (f) => f && f.type && f.type.startsWith('image/')
+        );
+        if (files.length === 0) {
             showMessage('Por favor selecciona un archivo de imagen válido (JPG, PNG, WEBP).', true);
             return;
         }
 
-        const reader = new FileReader();
-        reader.onload = async function (e) {
-            const rawDataUrl = e.target.result;
+        state.uploadedImages = [];
+        for (const file of files) {
+            const rawDataUrl = await readFileAsDataUrl(file);
             const compressed = await StudioAI.Viewer.compressAndResizeImage(rawDataUrl, 1536);
+            state.uploadedImages.push({
+                dataUrl: compressed.dataUrl,
+                width: compressed.width,
+                height: compressed.height
+            });
+        }
 
-            state.base64UploadedImage = compressed.dataUrl;
-            state.uploadedImgWidth = compressed.width;
-            state.uploadedImgHeight = compressed.height;
+        const first = state.uploadedImages[0];
+        state.base64UploadedImage = first.dataUrl;
+        state.uploadedImgWidth = first.width;
+        state.uploadedImgHeight = first.height;
 
-            const img = document.getElementById('uploadedPreview');
-            const placeholder = document.getElementById('uploadPlaceholder');
-            const btnRemove = document.getElementById('btnRemoveUpload');
-            const dimBadge = document.getElementById('origDimensions');
+        const img = document.getElementById('uploadedPreview');
+        const placeholder = document.getElementById('uploadPlaceholder');
+        const btnRemove = document.getElementById('btnRemoveUpload');
+        const dimBadge = document.getElementById('origDimensions');
 
-            if (img) {
-                img.src = state.base64UploadedImage;
-                img.classList.remove('hidden');
-            }
-            if (placeholder) placeholder.classList.add('hidden');
-            if (btnRemove) btnRemove.classList.remove('hidden');
-            if (dimBadge) {
-                dimBadge.textContent = `${state.uploadedImgWidth}×${state.uploadedImgHeight}px`;
-                dimBadge.classList.remove('hidden');
-            }
+        if (img) {
+            img.src = state.base64UploadedImage;
+            img.classList.remove('hidden');
+        }
+        if (placeholder) placeholder.classList.add('hidden');
+        if (btnRemove) btnRemove.classList.remove('hidden');
+        if (dimBadge) {
+            dimBadge.textContent = state.uploadedImages.length > 1
+                ? `${state.uploadedImages.length} imágenes en cola`
+                : `${state.uploadedImgWidth}×${state.uploadedImgHeight}px`;
+            dimBadge.classList.remove('hidden');
+        }
 
-            if (state.viewerMode === 'video') {
-                StudioAI.Viewer.startVideoDemoCanvas(
-                    state.currentPreset,
-                    state.videoDurationSeconds,
-                    state.base64UploadedImage
-                );
-            }
-        };
-        reader.readAsDataURL(file);
+        if (state.viewerMode === 'video') {
+            StudioAI.Viewer.startVideoDemoCanvas(
+                state.currentPreset,
+                state.videoDurationSeconds,
+                state.base64UploadedImage
+            );
+        }
+
+        if (state.uploadedImages.length > 1) {
+            showMessage(
+                `${state.uploadedImages.length} imágenes cargadas. En Video se generará un clip por cada una, una tras otra.`
+            );
+        }
     }
 
     function previewUpload(event) {
         const files = event && event.target && event.target.files;
         if (!files || files.length === 0) return;
-        processImageFile(files[0]);
+        processImageFiles(files);
     }
 
     function previewFaceReference(event) {
@@ -922,6 +953,7 @@
             event.stopPropagation();
         }
         state.base64UploadedImage = null;
+        state.uploadedImages = [];
         state.uploadedImgWidth = 768;
         state.uploadedImgHeight = 768;
 
@@ -1214,7 +1246,8 @@
         const playableResultUrl = getPlayableMediaUrl(response.dataUrl);
 
         if (state.lastGeneratedMediaType === 'video') {
-            if (!state.currentPreset || state.currentPreset.category !== 'video') {
+            const jobPreset = meta.preset !== undefined ? meta.preset : state.currentPreset;
+            if (!jobPreset || jobPreset.category !== 'video') {
                 setMainCategory('video');
             }
             if (btnSendToVid) btnSendToVid.classList.add('hidden');
@@ -1277,21 +1310,19 @@
             state.isGenerating = false;
             if (generateBtn) generateBtn.disabled = false;
             refreshBillingStatus(job.rawUrl).catch(() => {});
+            if (state.generationQueue.length) {
+                drainGenerationQueue().catch(() => {});
+            }
         }
     }
 
     async function generateMedia() {
-        if (state.isGenerating) return;
-
         const apiInput = document.getElementById('apiUrl');
         const promptInput = document.getElementById('prompt');
         const stepsInput = document.getElementById('steps');
         const cfgInput = document.getElementById('cfg');
         const denoiseInput = document.getElementById('denoise');
         const loraInput = document.getElementById('loraScale');
-        const loadingEl = document.getElementById('loadingState');
-        const loadingTextEl = document.getElementById('loadingStatusText');
-        const generateBtn = document.getElementById('generateBtn');
 
         const rawUrl = apiInput ? apiInput.value.trim() : '';
         const prompt = promptInput ? promptInput.value.trim() : '';
@@ -1334,6 +1365,14 @@
             return;
         }
 
+        const imageQueue = isVideoMode && state.uploadedImages.length > 1
+            ? state.uploadedImages
+            : [{
+                dataUrl: state.base64UploadedImage,
+                width: state.uploadedImgWidth,
+                height: state.uploadedImgHeight
+            }];
+
         const billingStatus = await refreshBillingStatus(rawUrl);
         if (billingStatus.ok && billingStatus.can_generate === false) {
             const remaining = Number(billingStatus.remaining_usd);
@@ -1351,14 +1390,80 @@
             return;
         }
 
+        const job = {
+            rawUrl,
+            prompt,
+            steps,
+            cfgScale,
+            denoiseStrength,
+            loraScale,
+            preset: state.currentPreset,
+            customLoraId: state.customLoraId,
+            videoDurationSeconds: state.videoDurationSeconds,
+            faceImage: state.base64FaceImage,
+            isVideoMode,
+            isEnhanceMode,
+            isFullBodyMode,
+            imageQueue: imageQueue.slice(),
+            presetTitle: state.currentPreset ? state.currentPreset.name : 'Personalizado'
+        };
+
+        state.generationQueue.push(job);
+        if (state.isGenerating) {
+            showMessage(
+                `📥 "${job.presetTitle}" encolado — ${state.generationQueue.length} trabajo(s) en espera.`
+            );
+            return;
+        }
+        drainGenerationQueue().catch(() => {});
+    }
+
+    async function drainGenerationQueue() {
+        if (state.isGenerating) return;
         state.isGenerating = true;
-        if (generateBtn) generateBtn.disabled = true;
+        const loadingEl = document.getElementById('loadingState');
+        const inlineBox = document.getElementById('inlineProgressBox');
         if (loadingEl) {
             loadingEl.classList.remove('hidden');
             loadingEl.classList.add('flex');
         }
+        if (inlineBox) inlineBox.classList.remove('hidden');
+        try {
+            while (state.generationQueue.length) {
+                const job = state.generationQueue.shift();
+                await runGenerationJob(job);
+            }
+        } finally {
+            state.isGenerating = false;
+            if (loadingEl) {
+                loadingEl.classList.add('hidden');
+                loadingEl.classList.remove('flex');
+            }
+            setTimeout(() => {
+                if (!state.isGenerating && inlineBox) {
+                    inlineBox.classList.add('hidden');
+                }
+            }, 1800);
+        }
+    }
 
-        const inlineBox = document.getElementById('inlineProgressBox');
+    async function runGenerationJob(job) {
+        const {
+            rawUrl,
+            prompt,
+            steps,
+            cfgScale,
+            denoiseStrength,
+            loraScale,
+            videoDurationSeconds,
+            isVideoMode,
+            isEnhanceMode,
+            isFullBodyMode,
+            imageQueue,
+            presetTitle
+        } = job;
+
+        const loadingTextEl = document.getElementById('loadingStatusText');
         const inlineBar = document.getElementById('inlineProgressBar');
         const inlinePct = document.getElementById('inlineProgressPct');
         const inlinePhase = document.getElementById('inlineProgressPhase');
@@ -1368,8 +1473,6 @@
         const viewerPct = document.getElementById('viewerProgressPct');
         const viewerEta = document.getElementById('viewerProgressEta');
 
-        if (inlineBox) inlineBox.classList.remove('hidden');
-
         const nowMs = Date.now();
         const isGpuWarm = isVideoMode
             ? nowMs - state.lastVideoGpuWarmAt < 110000
@@ -1378,11 +1481,9 @@
         // Tiempo total estimado según duración real y si la GPU ya está encendida
         const videoEstimate = { 5: 45, 10: 90, 20: 180 };
         const baseVideoEstimate =
-            videoEstimate[state.videoDurationSeconds] || videoEstimate[5];
+            videoEstimate[videoDurationSeconds] || videoEstimate[5];
         const estTotalSec = isVideoMode
-            ? isGpuWarm
-                ? baseVideoEstimate
-                : baseVideoEstimate + 35
+            ? baseVideoEstimate * imageQueue.length + (isGpuWarm ? 0 : 35)
             : isGpuWarm
             ? isFullBodyMode
                 ? 55
@@ -1392,6 +1493,7 @@
             : 58;
 
         const startMs = Date.now();
+        let batchIndex = 0;
         const setProgressUi = (pctValue, phaseText, etaText, subText) => {
             const clampedPct = Math.max(0, Math.min(100, Math.round(pctValue)));
             if (inlineBar) inlineBar.style.width = `${clampedPct}%`;
@@ -1421,7 +1523,9 @@
             let phaseText;
             let subText;
             if (isVideoMode) {
-                subText = `Wan 2.1 I2V + LoRA (${state.videoDurationSeconds}s reales)`;
+                subText = imageQueue.length > 1
+                    ? `Video ${batchIndex + 1}/${imageQueue.length} · Wan 2.1 I2V + LoRA (${videoDurationSeconds}s c/u)`
+                    : `Wan 2.1 I2V + LoRA (${videoDurationSeconds}s reales)`;
                 if (!isGpuWarm && elapsedSec < 14) {
                     phaseText = 'Fase 1/3: Encendiendo GPU A100-80GB en Modal...';
                 } else if (pct < 82) {
@@ -1467,6 +1571,9 @@
                     ? `Faltan ~${remainingSec}s (Transcurrido: ${elapsedInt}s)`
                     : `Finalizando detalles... (${elapsedInt}s)`;
 
+            if (state.generationQueue.length) {
+                subText = `${state.generationQueue.length} en cola · ${subText}`;
+            }
             setProgressUi(pct, phaseText, etaText, subText);
         };
 
@@ -1475,129 +1582,151 @@
 
         const now = new Date();
         const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const presetTitle = state.currentPreset ? state.currentPreset.name : 'Personalizado';
+
+        const sharedParams = {
+            rawUrl,
+            prompt,
+            negativePrompt: job.preset && job.preset.negativePrompt
+                ? job.preset.negativePrompt
+                : StudioAI.Config.DEFAULT_NEGATIVE_PROMPT,
+            steps,
+            cfgScale,
+            denoiseStrength,
+            loraScale,
+            loraId: job.preset
+                ? job.preset.customLoraSelectable
+                    ? job.customLoraId || 'none'
+                    : job.preset.loraId
+                : null,
+            maskTarget: job.preset ? job.preset.maskTarget : 'all_clothes',
+            skinPreAdapt: job.preset ? job.preset.skinPreAdapt : true,
+            faceImage: isVideoMode ? job.faceImage : null,
+            isVideo: isVideoMode,
+            videoDurationSeconds,
+            chain: job.preset ? job.preset.chain : null,
+            seed: job.preset ? job.preset.seed : null,
+            preserveLimbs: job.preset
+                ? job.preset.preserveLimbs
+                : null,
+            blendMode: job.preset
+                ? job.preset.blendMode
+                : null,
+            detailRestore: job.preset
+                ? job.preset.detailRestore
+                : null,
+            colorRestore: job.preset
+                ? job.preset.colorRestore
+                : null,
+            expandBody: job.preset
+                ? job.preset.expandBody
+                : null,
+            fullBody: job.preset
+                ? job.preset.fullBody
+                : null,
+            frameScale: job.preset
+                ? job.preset.frameScale
+                : null,
+            frameAlignX: job.preset
+                ? job.preset.frameAlignX
+                : null,
+            controlScale: job.preset
+                ? job.preset.controlScale
+                : null,
+            outpaintSteps: job.preset
+                ? job.preset.outpaintSteps
+                : null,
+            outpaintControlScale: job.preset
+                ? job.preset.outpaintControlScale
+                : null,
+            refineStrength: job.preset
+                ? job.preset.refineStrength
+                : null,
+            extendRatio: job.preset
+                ? job.preset.extendRatio
+                : null
+        };
+
+        const isBatch = imageQueue.length > 1;
+        let okCount = 0;
+        let lastError = null;
+        let lastOkResponse = null;
 
         try {
-            const response = await StudioAI.Api.generateMedia({
-                rawUrl,
-                prompt,
-                negativePrompt: state.currentPreset && state.currentPreset.negativePrompt
-                    ? state.currentPreset.negativePrompt
-                    : StudioAI.Config.DEFAULT_NEGATIVE_PROMPT,
-                steps,
-                cfgScale,
-                denoiseStrength,
-                loraScale,
-                loraId: state.currentPreset
-                    ? state.currentPreset.customLoraSelectable
-                        ? state.customLoraId || 'none'
-                        : state.currentPreset.loraId
-                    : null,
-                maskTarget: state.currentPreset ? state.currentPreset.maskTarget : 'all_clothes',
-                skinPreAdapt: state.currentPreset ? state.currentPreset.skinPreAdapt : true,
-                base64Image: state.base64UploadedImage,
-                faceImage: isVideoMode ? state.base64FaceImage : null,
-                imgWidth: state.uploadedImgWidth,
-                imgHeight: state.uploadedImgHeight,
-                isVideo: isVideoMode,
-                videoDurationSeconds: state.videoDurationSeconds,
-                seed: state.currentPreset ? state.currentPreset.seed : null,
-                preserveLimbs: state.currentPreset
-                    ? state.currentPreset.preserveLimbs
-                    : null,
-                blendMode: state.currentPreset
-                    ? state.currentPreset.blendMode
-                    : null,
-                detailRestore: state.currentPreset
-                    ? state.currentPreset.detailRestore
-                    : null,
-                colorRestore: state.currentPreset
-                    ? state.currentPreset.colorRestore
-                    : null,
-                expandBody: state.currentPreset
-                    ? state.currentPreset.expandBody
-                    : null,
-                fullBody: state.currentPreset
-                    ? state.currentPreset.fullBody
-                    : null,
-                frameScale: state.currentPreset
-                    ? state.currentPreset.frameScale
-                    : null,
-                frameAlignX: state.currentPreset
-                    ? state.currentPreset.frameAlignX
-                    : null,
-                controlScale: state.currentPreset
-                    ? state.currentPreset.controlScale
-                    : null,
-                outpaintSteps: state.currentPreset
-                    ? state.currentPreset.outpaintSteps
-                    : null,
-                outpaintControlScale: state.currentPreset
-                    ? state.currentPreset.outpaintControlScale
-                    : null,
-                refineStrength: state.currentPreset
-                    ? state.currentPreset.refineStrength
-                    : null,
-                extendRatio: state.currentPreset
-                    ? state.currentPreset.extendRatio
-                    : null,
-                onSubmitted: (callId, mediaType) =>
-                    StudioAI.Storage.saveSetting(PENDING_JOB_KEY, {
-                        callId,
-                        mediaType,
-                        rawUrl,
-                        presetName: presetTitle,
-                        timeStr,
-                        duration: isVideoMode ? state.videoDurationSeconds : null,
-                        startedAt: Date.now()
-                    })
-            });
+            for (let i = 0; i < imageQueue.length; i++) {
+                batchIndex = i;
+                const item = imageQueue[i];
+                const itemLabel = isBatch ? ` (${i + 1}/${imageQueue.length})` : '';
+                const response = await StudioAI.Api.generateMedia({
+                    ...sharedParams,
+                    base64Image: item.dataUrl,
+                    imgWidth: item.width,
+                    imgHeight: item.height,
+                    onSubmitted: (callId, mediaType) =>
+                        StudioAI.Storage.saveSetting(PENDING_JOB_KEY, {
+                            callId,
+                            mediaType,
+                            rawUrl,
+                            presetName: `${presetTitle}${itemLabel}`,
+                            timeStr,
+                            duration: isVideoMode ? videoDurationSeconds : null,
+                            startedAt: Date.now()
+                        })
+                });
 
-            if (response.ok && response.dataUrl) {
-                const totalElapsed = Math.max(1, Math.round((Date.now() - startMs) / 1000));
+                if (!response.ok || !response.dataUrl) {
+                    lastError = response.error;
+                    continue;
+                }
+                okCount++;
+                lastOkResponse = response;
+
                 if (isVideoMode) {
                     state.lastVideoGpuWarmAt = Date.now();
                 } else {
                     state.lastImageGpuWarmAt = Date.now();
                 }
 
+                const totalElapsed = Math.max(1, Math.round((Date.now() - startMs) / 1000));
                 setProgressUi(
                     100,
-                    '¡Generación completada!',
+                    isBatch
+                        ? `Video ${i + 1}/${imageQueue.length} completado`
+                        : '¡Generación completada!',
                     `Completado en ${totalElapsed}s`,
                     'Guardado automáticamente en tu historial'
                 );
 
                 await presentAndSaveResult(response, {
-                    presetName: presetTitle,
+                    presetName: `${presetTitle}${itemLabel}`,
+                    preset: job.preset,
                     timeStr,
-                    duration: isVideoMode ? state.videoDurationSeconds : null,
+                    duration: isVideoMode ? videoDurationSeconds : null,
                     fallbackType: isVideoMode ? 'video' : 'image'
                 });
-                const dims = response.dimensions;
+            }
+
+            if (isBatch) {
+                showMessage(
+                    okCount === imageQueue.length
+                        ? `¡${okCount} videos generados y guardados en tu Carpeta del Proyecto!`
+                        : `${okCount} de ${imageQueue.length} videos completados${lastError ? `; último error: ${describeGenerationError(lastError)}` : ''}`,
+                    okCount === 0
+                );
+            } else if (okCount === 1) {
+                const totalElapsed = Math.max(1, Math.round((Date.now() - startMs) / 1000));
+                const dims = lastOkResponse ? lastOkResponse.dimensions : null;
                 showMessage(
                     state.lastGeneratedMediaType === 'video'
                         ? `¡Video MP4 generado en ${totalElapsed}s y guardado en tu Carpeta del Proyecto!`
                         : `¡Resultado generado${dims ? ` (${dims.width}×${dims.height}px)` : ''} en ${totalElapsed}s!`
                 );
             } else {
-                showMessage(describeGenerationError(response.error), true);
+                showMessage(describeGenerationError(lastError), true);
             }
         } finally {
             StudioAI.Storage.saveSetting(PENDING_JOB_KEY, null);
             refreshBillingStatus(rawUrl).catch(() => {});
             clearInterval(timerInterval);
-            state.isGenerating = false;
-            if (generateBtn) generateBtn.disabled = false;
-            if (loadingEl) {
-                loadingEl.classList.add('hidden');
-                loadingEl.classList.remove('flex');
-            }
-            setTimeout(() => {
-                if (!state.isGenerating && inlineBox) {
-                    inlineBox.classList.add('hidden');
-                }
-            }, 1800);
         }
     }
 
@@ -1624,7 +1753,7 @@
         dropZone.addEventListener('drop', (e) => {
             const dt = e.dataTransfer;
             if (dt && dt.files && dt.files.length > 0) {
-                processImageFile(dt.files[0]);
+                processImageFiles(dt.files);
             }
         });
     }

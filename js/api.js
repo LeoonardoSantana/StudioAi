@@ -248,6 +248,7 @@
             imgHeight,
             isVideo,
             videoDurationSeconds,
+            chain,
             seed,
             preserveLimbs,
             blendMode,
@@ -347,6 +348,9 @@
         if (isVideo) {
             payload.is_video = true;
             payload.video_duration_seconds = videoDurationSeconds;
+            if (chain) {
+                payload.chain = chain;
+            }
         }
 
         try {
