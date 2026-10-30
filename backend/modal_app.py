@@ -3018,11 +3018,23 @@ class VideoEngine:
 
         req_seconds = int(payload.get("video_duration_seconds", 5))
         if chain_steps:
-            chunks_needed = len(chain_steps)
-            req_seconds = 5 * chunks_needed
+            chunk_frames = [81] * len(chain_steps)
+            req_seconds = 5 * len(chain_steps)
         else:
-            req_seconds = 20 if req_seconds >= 20 else 10 if req_seconds >= 10 else 5
-            chunks_needed = {5: 1, 10: 2, 20: 4}[req_seconds]
+            req_seconds = (
+                20 if req_seconds >= 20
+                else 10 if req_seconds >= 10
+                else 5
+            )
+            target_frames = req_seconds * 16
+            chunk_frames = []
+            produced = 0
+            while produced < target_frames:
+                need = target_frames - produced
+                nf = min(81, need + (1 if produced else 0))
+                nf = 1 + 4 * max(1, int(round((nf - 1) / 4)))
+                chunk_frames.append(nf)
+                produced += nf if produced == 0 else nf - 1
         video_steps = max(4, min(10, int(payload.get("steps") or 6)))
         video_cfg = max(
             1.0, min(4.0, float(payload.get("cfg_scale") or 1.0))
@@ -3032,6 +3044,7 @@ class VideoEngine:
 
         all_frames = []
         condition_img = img
+        chunks_needed = len(chunk_frames)
         with torch.inference_mode():
             for chunk_idx in range(chunks_needed):
                 if chain_steps:
@@ -3124,7 +3137,7 @@ class VideoEngine:
                         negative_prompt=negative_prompt,
                         height=target_h,
                         width=target_w,
-                        num_frames=81,
+                        num_frames=chunk_frames[chunk_idx],
                         guidance_scale=video_cfg,
                         num_inference_steps=video_steps,
                         generator=generator,

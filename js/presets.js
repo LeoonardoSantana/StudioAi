@@ -199,7 +199,7 @@
             badge: 'LoRA: str1p v1',
             beforeDesc: 'Foto en top, bikini o lencería',
             afterDesc: 'Se quita la prenda superior mostrando el pecho desnudo (cámara fija)',
-            prompt: 'str1p. The woman starts fully clothed, looks at the camera, slowly lifts her top and takes it off, revealing her bare breasts. She finishes topless, keeping her exact original facial expression throughout. Sexy video, uncensored, static camera, no camera movement. str1p',
+            prompt: 'str1p. The woman starts fully clothed, looks at the camera, slowly lifts her top and takes it off, revealing her bare breasts. She finishes topless, keeping her exact original facial expression throughout. She stays turned toward the camera the whole time, keeping the same body orientation as the original photo, and ends in a pose very close to her original position. Sexy video, uncensored, static camera, no camera movement. str1p',
             negativePrompt: WAN_NEGATIVE_PROMPT,
             steps: 6,
             cfg: 1.0,
@@ -217,7 +217,7 @@
             badge: 'LoRA: TittyDrop I2V',
             beforeDesc: 'Foto con blusa o sostén',
             afterDesc: 'Levanta o baja su blusa revelando el pecho con física real (cámara fija)',
-            prompt: 'tittydrop. The woman starts with her top down, then pulls it up to reveal her bare breasts, lets them drop naturally with realistic bounce and physics, keeping her exact original facial expression throughout. Static camera, no zoom, realistic skin texture, uncensored. tittydrop',
+            prompt: 'tittydrop. The woman starts with her top down, then pulls it up to reveal her bare breasts, lets them drop naturally with realistic bounce and physics, keeping her exact original facial expression throughout. She stays turned toward the camera the whole time and ends in a pose very close to her original position. Static camera, no zoom, realistic skin texture, uncensored. tittydrop',
             negativePrompt: WAN_NEGATIVE_PROMPT,
             steps: 6,
             cfg: 1.0,
@@ -235,7 +235,7 @@
             badge: 'LoRA: Clothes On/Off',
             beforeDesc: 'Foto con ropa normal',
             afterDesc: 'Cubre la lente con la mano y al quitarla aparece completamente desnuda',
-            prompt: 'clothes_on_off. The video starts with the woman fully clothed. She reaches toward the lens and covers the view with her hand. When she removes her hand she is completely naked in the same pose and background, showing bare breasts and vulva. She keeps her exact original facial expression throughout. Static camera, no zoom, realistic detail, HD. clothes_on_off',
+            prompt: 'clothes_on_off. The video starts with the woman fully clothed. She reaches toward the lens and covers the view with her hand. When she removes her hand she is completely naked in the same pose and background, showing bare breasts and vulva. She keeps her exact original facial expression throughout, stays turned toward the camera the whole time, and ends in a pose very close to her original position. Static camera, no zoom, realistic detail, HD. clothes_on_off',
             negativePrompt: WAN_NEGATIVE_PROMPT,
             steps: 6,
             cfg: 1.0,
@@ -253,7 +253,7 @@
             badge: 'LoRA: Action Bounce',
             beforeDesc: 'Foto desnuda o en lencería',
             afterDesc: 'Movimiento rítmico del cuerpo y rebote natural de pecho sin mover cámara',
-            prompt: 'bounce. A nude woman moves naturally and relaxed, gently shifting her hips with subtle realistic soft-body physics, keeping her exact original facial expression, static camera, locked tripod shot, realistic skin detail, uncensored. bounce',
+            prompt: 'bounce. A nude woman stays turned toward the camera throughout, keeping the same body orientation as the original photo, never turning her back. She moves naturally and relaxed, gently shifting her hips with subtle realistic soft-body physics, keeping her exact original facial expression, then settles back into a pose very close to her original position by the last frame. Static camera, locked tripod shot, realistic skin detail, uncensored. bounce',
             negativePrompt: WAN_NEGATIVE_PROMPT,
             steps: 6,
             cfg: 1.0,
@@ -271,7 +271,7 @@
             badge: 'LoRA: Fondling I2V',
             beforeDesc: 'Foto en topless o lencería',
             afterDesc: 'Acaricia y sostiene su pecho con expresión sensual manteniendo cámara fija',
-            prompt: 'boob_grab. A pretty woman slowly and sensually caresses her bare breasts, teasing gentle squeezing motions, biting her lower lip with half-closed eyes, keeping her original face identity, seductive slow motion, static camera, no camera movement, realistic skin pores and lighting, uncensored. boob_grab',
+            prompt: 'boob_grab. A pretty woman stays turned toward the camera throughout, keeping the same body orientation as the original photo, never turning her back. She slowly and sensually caresses her bare breasts, teasing gentle squeezing motions, biting her lower lip with half-closed eyes, keeping her original face identity and expression, seductive slow motion, ending in a pose very close to her original position by the last frame, static camera, no camera movement, realistic skin pores and lighting, uncensored. boob_grab',
             negativePrompt: WAN_NEGATIVE_PROMPT,
             steps: 6,
             cfg: 1.0,
@@ -294,12 +294,12 @@
                 {
                     loraId: 'clothes_on_off',
                     loraScale: 0.85,
-                    prompt: 'clothes_on_off. The video starts with the woman fully clothed. She reaches toward the lens and covers the view with her hand. When she removes her hand she is completely naked in the same pose and background, showing bare breasts and vulva. She keeps her exact original facial expression throughout. Static camera, no zoom, realistic detail, HD. clothes_on_off'
+                    prompt: 'clothes_on_off. The video starts with the woman fully clothed. She reaches toward the lens and covers the view with her hand. When she removes her hand she is completely naked in the same pose and background, showing bare breasts and vulva. She keeps her exact original facial expression throughout, stays turned toward the camera the whole time, and ends in a pose very close to her original position. Static camera, no zoom, realistic detail, HD. clothes_on_off'
                 },
                 {
                     loraId: 'bounce',
                     loraScale: 0.70,
-                    prompt: 'bounce. A nude woman moves naturally and relaxed, gently shifting her hips with subtle realistic soft-body physics, keeping her exact original facial expression, static camera, locked tripod shot, realistic skin detail, uncensored. bounce'
+                    prompt: 'bounce. A nude woman stays turned toward the camera throughout, keeping the same body orientation as the original photo, never turning her back. She moves naturally and relaxed, gently shifting her hips with subtle realistic soft-body physics, keeping her exact original facial expression, then settles back into a pose very close to her original position by the last frame. Static camera, locked tripod shot, realistic skin detail, uncensored. bounce'
                 }
             ],
             negativePrompt: WAN_NEGATIVE_PROMPT,
@@ -324,12 +324,12 @@
                 {
                     loraId: 'clothes_on_off',
                     loraScale: 0.85,
-                    prompt: 'clothes_on_off. The video starts with the woman fully clothed. She reaches toward the lens and covers the view with her hand. When she removes her hand she is completely naked in the same pose and background, showing bare breasts and vulva. She keeps her exact original facial expression throughout. Static camera, no zoom, realistic detail, HD. clothes_on_off'
+                    prompt: 'clothes_on_off. The video starts with the woman fully clothed. She reaches toward the lens and covers the view with her hand. When she removes her hand she is completely naked in the same pose and background, showing bare breasts and vulva. She keeps her exact original facial expression throughout, stays turned toward the camera the whole time, and ends in a pose very close to her original position. Static camera, no zoom, realistic detail, HD. clothes_on_off'
                 },
                 {
                     loraId: 'boob_grab',
                     loraScale: 0.85,
-                    prompt: 'boob_grab. A pretty woman slowly and sensually caresses her bare breasts, teasing gentle squeezing motions, biting her lower lip with half-closed eyes, keeping her original face identity, seductive slow motion, static camera, no camera movement, realistic skin pores and lighting, uncensored. boob_grab'
+                    prompt: 'boob_grab. A pretty woman stays turned toward the camera throughout, keeping the same body orientation as the original photo, never turning her back. She slowly and sensually caresses her bare breasts, teasing gentle squeezing motions, biting her lower lip with half-closed eyes, keeping her original face identity and expression, seductive slow motion, ending in a pose very close to her original position by the last frame, static camera, no camera movement, realistic skin pores and lighting, uncensored. boob_grab'
                 }
             ],
             negativePrompt: WAN_NEGATIVE_PROMPT,
@@ -360,7 +360,7 @@
             name: 'Cambio Súbito de Outfit', badge: 'LoRA: Outfit Change',
             beforeDesc: 'Foto con cualquier ropa',
             afterDesc: 'Cambia de outfit de golpe a mitad del video (cámara fija)',
-            prompt: 'The woman is posing for the camera in her outfit, then a sudden outfit change into sexy black lace lingerie, she keeps posing and smiling naturally. Static camera, no zoom.',
+            prompt: 'The woman is posing for the camera in her outfit, then a sudden outfit change into sexy black lace lingerie, she keeps posing and smiling naturally. She stays turned toward the camera the whole time and ends in a pose very close to her original position. Static camera, no zoom.',
             themeColor: '#8b5cf6', motionStyle: 'turn'
         },
         {
@@ -368,7 +368,7 @@
             name: 'Rasgar la Ropa +18', badge: 'LoRA: rip-shura',
             beforeDesc: 'Foto con top, bodysuit o leggings',
             afterDesc: 'Se rasga la ropa de forma dramática exponiendo el cuerpo',
-            prompt: 'Medium shot, the woman stands facing the camera, then rips her clothes open with both hands exposing her bare breasts and body. Aggressive dramatic undressing, rip her clothes keeping her exact original facial expression. Static camera, no zoom.',
+            prompt: 'Medium shot, the woman stands facing the camera, then rips her clothes open with both hands exposing her bare breasts and body. Aggressive dramatic undressing, rip her clothes keeping her exact original facial expression. She stays turned toward the camera the whole time and ends in a pose very close to her original position. Static camera, no zoom.',
             themeColor: '#ef4444', motionStyle: 'turn'
         },
         {
@@ -376,7 +376,7 @@
             name: 'Bajarse la Ropa +18', badge: 'LoRA: Pull-down',
             beforeDesc: 'Foto con top o pantalón',
             afterDesc: 'Baja su ropa lentamente hasta quedar desnuda',
-            prompt: 'The woman slowly pulls down her top and then her pants, sliding the fabric down her legs revealing her fully nude body. Smooth natural undressing motion keeping her exact original facial expression. Static camera, no zoom.',
+            prompt: 'The woman slowly pulls down her top and then her pants, sliding the fabric down her legs revealing her fully nude body. Smooth natural undressing motion keeping her exact original facial expression. She stays turned toward the camera the whole time and ends in a pose very close to her original position. Static camera, no zoom.',
             themeColor: '#f97316', motionStyle: 'turn'
         },
         {
@@ -384,7 +384,7 @@
             name: 'Antes y Después: Desnuda +18', badge: 'LoRA: Before/After',
             beforeDesc: 'Foto con ropa normal',
             afterDesc: 'Transición directa de vestida a desnuda en la misma pose',
-            prompt: 'before and after transformation, person wears casual clothes. The woman starts fully clothed, then transforms to completely nude in the exact same pose and background, bare breasts and vulva visible keeping her exact original facial expression. Static camera, no zoom.',
+            prompt: 'before and after transformation, person wears casual clothes. The woman starts fully clothed, then transforms to completely nude in the exact same pose and background, bare breasts and vulva visible keeping her exact original facial expression. She stays turned toward the camera the whole time and ends in a pose very close to her original position. Static camera, no zoom.',
             themeColor: '#0ea5e9', motionStyle: 'turn'
         },
         {
@@ -392,7 +392,7 @@
             name: 'Desnudarse por Completo +18', badge: 'LoRA: Undressing',
             beforeDesc: 'Foto con ropa',
             afterDesc: 'Se quita la ropa pieza por pieza hasta quedar desnuda',
-            prompt: 'The woman slowly undresses herself piece by piece until she is fully nude, natural motion, keeping her exact original facial expression throughout. Static camera, no zoom.',
+            prompt: 'The woman slowly undresses herself piece by piece until she is fully nude, natural motion, keeping her exact original facial expression throughout. She stays turned toward the camera the whole time and ends in a pose very close to her original position. Static camera, no zoom.',
             themeColor: '#ec4899', motionStyle: 'turn'
         },
         {
@@ -400,7 +400,7 @@
             name: 'Titty Drop Alternativo +18', badge: 'LoRA: TittyDrop v2',
             beforeDesc: 'Foto con blusa o sostén',
             afterDesc: 'Revela el pecho con caída natural (versión alternativa)',
-            prompt: 'The woman lifts her top to reveal her bare breasts letting them drop naturally with realistic bounce. She keeps her exact original facial expression. Static camera, no zoom.',
+            prompt: 'The woman lifts her top to reveal her bare breasts letting them drop naturally with realistic bounce. She keeps her exact original facial expression, stays turned toward the camera the whole time, and ends in a pose very close to her original position. Static camera, no zoom.',
             themeColor: '#6366f1', motionStyle: 'wind'
         },
                                 {
