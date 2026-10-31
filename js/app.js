@@ -474,6 +474,32 @@
         }
     }
 
+    function syncChainDurationUi(preset) {
+        const isChain =
+            preset &&
+            preset.category === 'video' &&
+            Array.isArray(preset.chain) &&
+            preset.chain.length > 1;
+        [5, 10, 20].forEach((s) => {
+            const btn = document.getElementById(`dur-${s}`);
+            if (!btn) return;
+            btn.disabled = isChain;
+            btn.classList.toggle('opacity-40', isChain);
+            btn.classList.toggle('cursor-not-allowed', isChain);
+        });
+        const hintEl = document.getElementById('durationCostHint');
+        if (!hintEl) return;
+        if (isChain) {
+            const total = preset.chain.length * 5;
+            hintEl.textContent = `${total}s fijos (cadena de ${preset.chain.length} clips)`;
+        } else {
+            const meta = StudioAI.Config.VIDEO_DURATIONS[
+                state.videoDurationSeconds
+            ] || { frames: 80, estimatedGpuTime: '~45 seg' };
+            hintEl.textContent = `${meta.frames} frames (${meta.estimatedGpuTime})`;
+        }
+    }
+
     function populateCustomLoraSelect() {
         const select = document.getElementById('customLoraSelect');
         if (!select) return;
@@ -680,6 +706,7 @@
         }
 
         updateModeVisibility(preset.category);
+        syncChainDurationUi(preset);
 
         renderPresets();
 
@@ -1424,9 +1451,17 @@
             : nowMs - state.lastImageGpuWarmAt < 140000;
 
         // Tiempo total estimado según duración real y si la GPU ya está encendida
+        const chainSteps =
+            job.preset && Array.isArray(job.preset.chain)
+                ? job.preset.chain.length
+                : 0;
+        const effectiveVideoSeconds = chainSteps
+            ? chainSteps * 5
+            : videoDurationSeconds;
         const videoEstimate = { 5: 45, 10: 90, 20: 180 };
-        const baseVideoEstimate =
-            videoEstimate[videoDurationSeconds] || videoEstimate[5];
+        const baseVideoEstimate = chainSteps
+            ? 45 * chainSteps
+            : videoEstimate[videoDurationSeconds] || videoEstimate[5];
         const estTotalSec = isVideoMode
             ? baseVideoEstimate * imageQueue.length + (isGpuWarm ? 0 : 35)
             : isGpuWarm
@@ -1468,9 +1503,15 @@
             let phaseText;
             let subText;
             if (isVideoMode) {
+                const durLabel = chainSteps
+                    ? `cadena ${chainSteps}×5s (${effectiveVideoSeconds}s)`
+                    : `${videoDurationSeconds}s`;
+                const faceLabel = job.preset && job.preset.bodyOnly
+                    ? ' · cara protegida'
+                    : '';
                 subText = imageQueue.length > 1
-                    ? `Video ${batchIndex + 1}/${imageQueue.length} · Wan 2.1 I2V + LoRA (${videoDurationSeconds}s c/u)`
-                    : `Wan 2.1 I2V + LoRA (${videoDurationSeconds}s reales)`;
+                    ? `Video ${batchIndex + 1}/${imageQueue.length} · Wan 2.1 I2V (${durLabel} c/u)${faceLabel}`
+                    : `Wan 2.1 I2V + LoRA (${durLabel} reales)${faceLabel}`;
                 if (!isGpuWarm && elapsedSec < 14) {
                     phaseText = 'Fase 1/3: Encendiendo GPU A100-80GB en Modal...';
                 } else if (pct < 82) {
@@ -1613,7 +1654,7 @@
                             rawUrl,
                             presetName: `${presetTitle}${itemLabel}`,
                             timeStr,
-                            duration: isVideoMode ? videoDurationSeconds : null,
+                            duration: isVideoMode ? effectiveVideoSeconds : null,
                             startedAt: Date.now()
                         })
                 });
@@ -1645,7 +1686,7 @@
                     presetName: `${presetTitle}${itemLabel}`,
                     preset: job.preset,
                     timeStr,
-                    duration: isVideoMode ? videoDurationSeconds : null,
+                    duration: isVideoMode ? effectiveVideoSeconds : null,
                     fallbackType: isVideoMode ? 'video' : 'image'
                 });
             }
