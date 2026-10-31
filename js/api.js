@@ -125,20 +125,36 @@
             return { ok: false, can_generate: false, error: 'URL inválida' };
         }
 
-        try {
-            const response = await fetchWithTimeout(
-                `${apiUrl}/sdapi/v1/billing-status`,
-                {
-                    method: 'GET',
-                    headers: { 'Bypass-Tunnel-Reminder': 'true' }
-                },
-                15000
-            );
-            const data = await response.json().catch(() => ({}));
-            return { ok: response.ok, ...data };
-        } catch (err) {
-            return { ok: false, can_generate: false, error: String(err) };
+        // El endpoint puede estar dormido (arranque en frío de Modal
+        // supera un timeout corto): reintentamos una vez con más margen.
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+            try {
+                const response = await fetchWithTimeout(
+                    `${apiUrl}/sdapi/v1/billing-status`,
+                    {
+                        method: 'GET',
+                        headers: { 'Bypass-Tunnel-Reminder': 'true' }
+                    },
+                    attempt === 0 ? 15000 : 45000
+                );
+                const data = await response.json().catch(() => ({}));
+                if (response.ok) {
+                    return { ok: true, ...data };
+                }
+                if (attempt === 1) {
+                    return { ok: false, ...data };
+                }
+            } catch (err) {
+                if (attempt === 1) {
+                    return {
+                        ok: false,
+                        can_generate: false,
+                        error: String(err)
+                    };
+                }
+            }
         }
+        return { ok: false, can_generate: false, error: 'Sin respuesta' };
     }
 
     // Margen sobre el timeout del backend (ImageEngine 300s, VideoEngine 900s)
