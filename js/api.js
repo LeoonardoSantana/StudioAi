@@ -370,18 +370,35 @@
 
         try {
             // 1. Intentar envío por cola asíncrona (responde en <0.1s y evita "Load failed")
-            const submitRes = await fetchWithTimeout(
-                `${apiUrl}/sdapi/v1/job/submit`,
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Bypass-Tunnel-Reminder': 'true'
-                    },
-                    body: JSON.stringify(payload)
-                },
-                30000
-            );
+            // Reintentos: un fetch abortado (pestaña suspendida en iOS,
+            // contenedor de la API aún despertando, micro-corte) no debe
+            // matar el trabajo — al volver el primer plano el reintento sale.
+            let submitRes = null;
+            let lastSubmitErr = null;
+            for (let attempt = 0; attempt < 3; attempt += 1) {
+                try {
+                    submitRes = await fetchWithTimeout(
+                        `${apiUrl}/sdapi/v1/job/submit`,
+                        {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Bypass-Tunnel-Reminder': 'true'
+                            },
+                            body: JSON.stringify(payload)
+                        },
+                        60000
+                    );
+                    lastSubmitErr = null;
+                    break;
+                } catch (submitErr) {
+                    lastSubmitErr = submitErr;
+                    await sleep(2000);
+                }
+            }
+            if (!submitRes) {
+                throw lastSubmitErr || new Error('Sin respuesta del servidor');
+            }
 
             let data;
             if (submitRes.ok) {
