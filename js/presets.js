@@ -253,7 +253,7 @@
             badge: 'LoRA: Action Bounce',
             beforeDesc: 'Foto desnuda o en lencería',
             afterDesc: 'Movimiento rítmico del cuerpo y rebote natural de pecho sin mover cámara',
-            prompt: 'bounce. A nude woman stays turned toward the camera throughout, keeping the same body orientation as the original photo, never turning her back. She moves naturally and relaxed, gently shifting her hips with subtle realistic soft-body physics, keeping her exact original facial expression, then settles back into a pose very close to her original position by the last frame. Static camera, locked tripod shot, realistic skin detail, uncensored. bounce',
+            prompt: 'bounce. A nude woman moves naturally and relaxed, gently shifting her hips with subtle realistic soft-body physics, keeping her exact original facial expression, static camera, locked tripod shot, realistic skin detail, uncensored. bounce',
             negativePrompt: WAN_NEGATIVE_PROMPT,
             steps: 6,
             cfg: 1.0,
@@ -299,7 +299,7 @@
                 {
                     loraId: 'bounce',
                     loraScale: 0.70,
-                    prompt: 'bounce. A nude woman stays turned toward the camera throughout, keeping the same body orientation as the original photo, never turning her back. She moves naturally and relaxed, gently shifting her hips with subtle realistic soft-body physics, keeping her exact original facial expression, then settles back into a pose very close to her original position by the last frame. Static camera, locked tripod shot, realistic skin detail, uncensored. bounce'
+                    prompt: 'bounce. A nude woman moves naturally and relaxed, gently shifting her hips with subtle realistic soft-body physics, keeping her exact original facial expression, static camera, locked tripod shot, realistic skin detail, uncensored. bounce'
                 }
             ],
             negativePrompt: WAN_NEGATIVE_PROMPT,
