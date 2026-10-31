@@ -243,12 +243,12 @@
             maskTarget,
             skinPreAdapt,
             base64Image,
-            faceImage,
             imgWidth,
             imgHeight,
             isVideo,
             videoDurationSeconds,
             chain,
+            bodyOnly,
             seed,
             preserveLimbs,
             blendMode,
@@ -341,15 +341,14 @@
             payload.init_images = [base64Image];
             payload.denoising_strength = denoiseStrength;
         }
-        if (isVideo && typeof faceImage === 'string' && faceImage) {
-            payload.face_image = faceImage;
-        }
-
         if (isVideo) {
             payload.is_video = true;
             payload.video_duration_seconds = videoDurationSeconds;
             if (chain) {
                 payload.chain = chain;
+            }
+            if (bodyOnly) {
+                payload.body_only = true;
             }
         }
 

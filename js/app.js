@@ -14,7 +14,6 @@
         videoDurationSeconds: 5,
         base64UploadedImage: null,
         uploadedImages: [],
-        base64FaceImage: null,
         uploadedImgWidth: 768,
         uploadedImgHeight: 768,
         fixedRefBefore: null,
@@ -388,7 +387,6 @@
         ];
         const videoOnlyIds = [
             'videoDurationBox',
-            'faceReferenceBox',
             'promptAssistantBox'
         ];
 
@@ -895,58 +893,6 @@
         processImageFiles(files);
     }
 
-    function previewFaceReference(event) {
-        const files = event && event.target && event.target.files;
-        const file = files && files[0];
-        if (!file) return;
-        if (!file.type || !file.type.startsWith('image/')) {
-            showMessage('Selecciona una imagen válida para la referencia facial.', true);
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = async function (e) {
-            const compressed = await StudioAI.Viewer.compressAndResizeImage(
-                e.target.result,
-                1024
-            );
-            state.base64FaceImage = compressed.dataUrl;
-
-            const img = document.getElementById('faceRefPreview');
-            const placeholder = document.getElementById('faceRefPlaceholder');
-            const btnRemove = document.getElementById('btnRemoveFaceRef');
-            if (img) {
-                img.src = compressed.dataUrl;
-                img.classList.remove('hidden');
-            }
-            if (placeholder) placeholder.classList.add('hidden');
-            if (btnRemove) btnRemove.classList.remove('hidden');
-            showMessage(
-                'Referencia facial lista. Si el rostro base está incompleto, Wan intentará usarla.'
-            );
-        };
-        reader.readAsDataURL(file);
-    }
-
-    function clearFaceReference(event) {
-        if (event) {
-            event.preventDefault();
-            event.stopPropagation();
-        }
-        state.base64FaceImage = null;
-        const fileInput = document.getElementById('faceInput');
-        const img = document.getElementById('faceRefPreview');
-        const placeholder = document.getElementById('faceRefPlaceholder');
-        const btnRemove = document.getElementById('btnRemoveFaceRef');
-        if (fileInput) fileInput.value = '';
-        if (img) {
-            img.src = '';
-            img.classList.add('hidden');
-        }
-        if (placeholder) placeholder.classList.remove('hidden');
-        if (btnRemove) btnRemove.classList.add('hidden');
-    }
-
     function clearUploadedImage(event) {
         if (event) {
             event.preventDefault();
@@ -1400,7 +1346,6 @@
             preset: state.currentPreset,
             customLoraId: state.customLoraId,
             videoDurationSeconds: state.videoDurationSeconds,
-            faceImage: state.base64FaceImage,
             isVideoMode,
             isEnhanceMode,
             isFullBodyMode,
@@ -1600,10 +1545,10 @@
                 : null,
             maskTarget: job.preset ? job.preset.maskTarget : 'all_clothes',
             skinPreAdapt: job.preset ? job.preset.skinPreAdapt : true,
-            faceImage: isVideoMode ? job.faceImage : null,
             isVideo: isVideoMode,
             videoDurationSeconds,
             chain: job.preset ? job.preset.chain : null,
+            bodyOnly: job.preset ? job.preset.bodyOnly : null,
             seed: job.preset ? job.preset.seed : null,
             preserveLimbs: job.preset
                 ? job.preset.preserveLimbs
@@ -1801,9 +1746,7 @@
         toggleSettingsModal,
         setMainCategory,
         previewUpload,
-        previewFaceReference,
         clearUploadedImage,
-        clearFaceReference,
         uploadFixedReference,
         setVideoDuration,
         setCustomLora,
