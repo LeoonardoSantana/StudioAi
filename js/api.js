@@ -262,6 +262,7 @@
             imgWidth,
             imgHeight,
             isVideo,
+            draft,
             videoDurationSeconds,
             chain,
             bodyOnly,
@@ -356,6 +357,9 @@
         if (base64Image) {
             payload.init_images = [base64Image];
             payload.denoising_strength = denoiseStrength;
+        }
+        if (draft && !isVideo) {
+            payload.draft = true;
         }
         if (isVideo) {
             payload.is_video = true;

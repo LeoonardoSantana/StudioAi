@@ -383,7 +383,8 @@
     function updateModeVisibility(category) {
         const isVideo = category === 'video';
         const imageOnlyIds = [
-            'denoiseOption'
+            'denoiseOption',
+            'draftOption'
         ];
         const videoOnlyIds = [
             'videoDurationBox',
@@ -1377,6 +1378,12 @@
             isEnhanceMode,
             isFullBodyMode,
             imageQueue: imageQueue.slice(),
+            draftMode: isVideoMode
+                ? false
+                : Boolean(
+                    document.getElementById('draftMode') &&
+                    document.getElementById('draftMode').checked
+                ),
             presetTitle: state.currentPreset ? state.currentPreset.name : 'Personalizado'
         };
 
@@ -1587,6 +1594,7 @@
             maskTarget: job.preset ? job.preset.maskTarget : 'all_clothes',
             skinPreAdapt: job.preset ? job.preset.skinPreAdapt : true,
             isVideo: isVideoMode,
+            draft: isVideoMode ? null : Boolean(job.draftMode),
             videoDurationSeconds,
             chain: job.preset ? job.preset.chain : null,
             bodyOnly: job.preset ? job.preset.bodyOnly : null,

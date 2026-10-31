@@ -1501,14 +1501,22 @@ class ImageEngine:
             "Prompt tokens:", before_p, "->", after_p,
             "| negative:", before_n, "->", after_n,
         )
-        steps = max(20, min(42, int(payload.get("steps") or 30)))
+        draft = bool(payload.get("draft") or payload.get("draftMode"))
+        steps = max(
+            8 if draft else 20,
+            min(42, int(payload.get("steps") or 30)),
+        )
         cfg_scale = max(3.0, min(7.0, float(payload.get("cfg_scale") or 5.0)))
         lora_scale = max(
             0.0, min(1.0, float(payload.get("lora_scale") or 0.0))
         )
-        refine_strength = max(
-            0.0,
-            min(0.5, float(payload.get("refine_strength") or 0.0)),
+        refine_strength = (
+            0.0
+            if draft
+            else max(
+                0.0,
+                min(0.5, float(payload.get("refine_strength") or 0.0)),
+            )
         )
         mask_target = payload.get("mask_target", "all_clothes")
         inpaint_pipe = self.inpaint

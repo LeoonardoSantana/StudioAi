@@ -48,12 +48,12 @@
             badge: 'Lustify Inpaint +18',
             beforeDesc: 'Persona con ropa original',
             afterDesc: 'Quita toda la ropa generando anatomía desnuda explícita sin cambiar cara ni pose',
-            prompt: 'photorealistic fully nude woman, same seated pose, same body position and camera framing, empty hands resting naturally, completely naked, full natural breasts, puffy areolae and nipples matching her natural lip color, bare abdomen and navel, exposed vulva, subtle natural pubic hair, bare legs and bare feet, warm golden skin tone, detailed natural skin texture, soft natural lighting, uncensored',
+            prompt: 'photorealistic fully nude woman, exact same skin tone as the original photo, same seated pose, same body position and camera framing, empty hands resting naturally, completely naked, full natural breasts, areolae and nipples matching her natural lip color, bare abdomen and navel, exposed vulva and subtle natural pubic hair only where the photo framing allows, keeping her necklace and tattoos intact, detailed natural skin texture with visible pores, same lighting as the original photo, uncensored',
             negativePrompt: NUDE_NEGATIVE_PROMPT,
             steps: 30,
             cfg: 5.0,
             denoise: 1.0,
-            loraScale: 0.0,
+            loraScale: 0.45,
             themeColor: '#f59e0b'
         },
         {
@@ -76,12 +76,12 @@
             badge: 'Expand4 + Outpaint',
             beforeDesc: 'Foto recortada o con cuerpo incompleto',
             afterDesc: 'Primero replica el resultado tipo expand4 y luego extiende cadera, muslos y fondo',
-            prompt: 'photorealistic fully nude woman, same face identity, same seated pose, same hand near hair, empty hand, same thin necklace and jewelry, completely naked, natural breasts, puffy areolae and nipples matching her natural lip color, long bare abdomen and navel, bare hips and upper thighs visible, subtle natural pubic hair, natural slim body proportions, warm golden skin tone, detailed natural skin texture, soft natural lighting, uncensored',
+            prompt: 'photorealistic fully nude woman, exact same skin tone as the original photo, same face identity, same seated pose, same hand near hair, empty hand, same thin necklace and jewelry, completely naked, natural breasts, areolae and nipples matching her natural lip color, long bare abdomen and navel, bare hips and upper thighs visible, subtle natural pubic hair, natural slim body proportions, detailed natural skin texture with visible pores, same lighting as the original photo, uncensored',
             negativePrompt: `${NUDE_NEGATIVE_PROMPT}, cropped body, cut off torso, missing hips, missing thighs, missing legs, floating body, disconnected legs, extra person, cloned body`,
             steps: 32,
             cfg: 6.0,
             denoise: 1.0,
-            loraScale: 0.0,
+            loraScale: 0.45,
             themeColor: '#facc15'
         },
         {
@@ -97,12 +97,12 @@
             badge: 'Solo Blusa/Top',
             beforeDesc: 'Blusa, top o sostén puesto',
             afterDesc: 'Quita únicamente la prenda superior dejando pechos al descubierto',
-            prompt: 'photorealistic topless woman, same pose, same body position and camera framing, empty hands resting naturally, completely bare chest, both breasts fully uncovered, natural breast shape and weight, puffy areolae and nipples matching her natural lip color, wearing the same lower-body clothing and the same outer garment only around the arms, no bra, no straps, warm golden skin tone, realistic skin pores, soft natural lighting, uncensored',
+            prompt: 'photorealistic topless woman, exact same skin tone as the original photo, same pose, same body position and camera framing, empty hands resting naturally, completely bare chest, both breasts fully uncovered, natural breast shape and weight, areolae and nipples matching her natural lip color, wearing the same lower-body clothing and the same outer garment only around the arms, no bra, no straps, keeping her necklace and tattoos intact, detailed natural skin texture with visible pores, same lighting as the original photo, uncensored',
             negativePrompt: `clothes on breasts, covered breasts, covered nipples, bra, bikini, straps, bad anatomy, extra limbs, extra fingers, missing fingers, deformed hands, distorted torso, ${POSE_PRESERVE_NEGATIVE}, camera, phone, tripod, object in hands, blurry, lowres, worst quality, watermark`,
             steps: 30,
             cfg: 5.5,
             denoise: 1.0,
-            loraScale: 0.0,
+            loraScale: 0.45,
             themeColor: '#ec4899'
         },
         {
@@ -123,7 +123,7 @@
             steps: 30,
             cfg: 5.0,
             denoise: 1.0,
-            loraScale: 0.0,
+            loraScale: 0.45,
             themeColor: '#8b5cf6'
         },
         {
@@ -144,7 +144,7 @@
             steps: 30,
             cfg: 5.0,
             denoise: 1.0,
-            loraScale: 0.0,
+            loraScale: 0.45,
             themeColor: '#3b82f6'
         },
         {
@@ -165,7 +165,7 @@
             steps: 30,
             cfg: 6.0,
             denoise: 1.0,
-            loraScale: 0.0,
+            loraScale: 0.45,
             themeColor: '#10b981'
         },
         {
@@ -184,7 +184,7 @@
             denoise: 0.36,
             detailRestore: 0.50,
             colorRestore: 0.95,
-            loraScale: 0.0,
+            loraScale: 0.45,
             themeColor: '#f97316'
         },
         // =====================================================================

@@ -36,7 +36,7 @@
                     <div class="flex items-center gap-2">
                         <h1 class="text-base font-bold tracking-tight text-white">Studio AI</h1>
                         <span class="hidden md:inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30">
-                            v1.8
+                            v1.9
                         </span>
                     </div>
                 </div>
@@ -251,7 +251,7 @@
                                 <span id="loraVal" class="font-mono text-pink-300 bg-pink-950/80 px-1.5 rounded">0.00</span>
                             </div>
                             <p class="text-[10px] text-slate-400 mb-2 leading-relaxed">
-                                Los presets de foto usan 0.00 para evitar piel artificial; los de video usan 0.85.
+                                Los presets de foto usan 0.45 (LoRA de detalle de piel); los de video usan 0.85.
                             </p>
                             <input type="range" id="loraScale" min="0" max="1.2" step="0.05" value="0.0" oninput="document.getElementById('loraVal').innerText = this.value"
                                    class="w-full accent-pink-500 bg-slate-800 h-1.5 rounded-lg cursor-pointer">
@@ -294,6 +294,17 @@
                             </p>
                             <input type="range" id="cfg" min="1" max="10" step="0.5" value="5.0" oninput="document.getElementById('cfgVal').innerText = this.value"
                                    class="w-full accent-indigo-500 bg-slate-800 h-1.5 rounded-lg cursor-pointer">
+                        </div>
+
+                        <!-- Modo Borrador -->
+                        <div id="draftOption" class="bg-slate-900/70 p-2.5 rounded-lg border border-amber-800/40">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="draftMode" class="accent-amber-500 w-4 h-4">
+                                <span class="text-[11px] font-semibold text-amber-200">4. Modo borrador (~mitad de costo GPU)</span>
+                            </label>
+                            <p class="text-[10px] text-slate-400 mt-1 leading-relaxed">
+                                Genera con menos pasos y sin el pase de refinado. Úsalo para probar seeds y prompts barato; desactívalo para el resultado final.
+                            </p>
                         </div>
                     </div>
                 </details>
