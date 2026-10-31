@@ -198,7 +198,7 @@
             name: '8. Quitarse el Top / Striptease Topless',
             badge: 'LoRA: str1p v1',
             beforeDesc: 'Foto en top, bikini o lencería',
-            afterDesc: 'Se quita la prenda superior mostrando el pecho desnudo (cámara fija)',
+            afterDesc: 'Baja la prenda por los hombros mostrando el pecho sin cubrir su rostro (cámara fija)',
             prompt: 'str1p. The woman starts fully clothed, looks at the camera, slides her top down past her shoulders and chest instead of pulling it over her head, the fabric moving away from her face and never covering it, revealing her bare breasts. She finishes topless, keeping her exact original facial expression throughout. She stays turned toward the camera the whole time, keeping the same body orientation as the original photo, and ends in a pose very close to her original position. Sexy video, uncensored, static camera, no camera movement. str1p',
             negativePrompt: WAN_NEGATIVE_PROMPT,
             steps: 6,
@@ -217,7 +217,7 @@
             name: '9. Descubrir Pecho / Titty Drop +18',
             badge: 'LoRA: TittyDrop I2V',
             beforeDesc: 'Foto con blusa o sostén',
-            afterDesc: 'Levanta o baja su blusa revelando el pecho con física real (cámara fija)',
+            afterDesc: 'Baja su top hasta la cintura dejando el pecho totalmente descubierto (cámara fija)',
             prompt: 'tittydrop. The woman slides the straps of her top off her shoulders and pulls the top down past her chest, letting her bare breasts drop out naturally with realistic bounce and physics, then keeps pulling the top down to her waist, ending completely topless with her breasts fully bare and no fabric covering her chest. She keeps her exact original facial expression throughout, stays turned toward the camera the whole time and ends in a pose very close to her original position. Static camera, no zoom, realistic skin texture, uncensored. tittydrop',
             negativePrompt: WAN_NEGATIVE_PROMPT,
             steps: 6,
@@ -385,8 +385,8 @@
         {
             id: 'vid-pulldown', loraId: 'pulldown_shura',
             name: 'Bajarse la Ropa +18', badge: 'LoRA: Pull-down',
-            beforeDesc: 'Foto con top o pantalón',
-            afterDesc: 'Baja su ropa lentamente hasta quedar desnuda',
+            beforeDesc: 'Foto con top o blusa',
+            afterDesc: 'Baja su top por debajo del pecho sin que la tela toque su rostro',
             prompt: 'The woman slowly pulls her top down below her chest, sliding the straps off her shoulders and revealing her bare breasts, the fabric slides downward away from her face, never covering it. Her face stays identical and untouched, keeping her exact original facial expression. She stays turned toward the camera the whole time and ends in a pose very close to her original position. Static camera, no zoom.',
             themeColor: '#f97316', motionStyle: 'turn',
             bodyOnly: true,
@@ -614,14 +614,24 @@
             inputType: 'undress', previewLink: 'https://drive.google.com/file/d/12-17DT9Lh2fIDT997z1vr9WasInzCx98/preview'
         },
         'vid-camera': {
-            desc: 'Sube la blusa y deja caer el pecho con rebote físico realista.',
+            desc: 'Baja su top hasta la cintura dejando el pecho totalmente descubierto.',
             tips: 'Blusa o sostén cubriendo el pecho; encuadre de cintura hacia arriba.',
             inputType: 'undress', previewLink: 'https://drive.google.com/file/d/1yLJldcCBDzOF6wB2VNpn1vkR24zcT56A/preview'
         },
-        'vid-turn': {
-            desc: 'Cubre la lente con la mano y al quitarla aparece completamente desnuda.',
-            tips: 'Cuerpo completo o medio cuerpo; funciona con cualquier ropa.',
-            inputType: 'undress', previewLink: 'https://drive.google.com/file/d/1VxLPd5en9zdOhDpFoApX05sRqbqr1Ci8/preview'
+        'vid-chain-nude-bounce': {
+            desc: 'Levanta su top sin tocar la cara y continúa con un rebote natural suave — 10s fluidos.',
+            tips: 'Foto con top puesto, mirando a cámara, medio cuerpo.',
+            inputType: 'undress'
+        },
+        'vid-chain-nude-fondle': {
+            desc: 'Levanta su top sin tocar la cara y sigue con una caricia sensual del pecho — 10s fluidos.',
+            tips: 'Foto con top puesto, mirando a cámara, medio cuerpo.',
+            inputType: 'undress'
+        },
+        'vid-chain-full-strip': {
+            desc: 'Levanta su top y luego la prenda desaparece por completo — termina totalmente en topless.',
+            tips: 'Foto con top puesto, mirando a cámara, medio cuerpo.',
+            inputType: 'undress'
         },
         'vid-wind': {
             desc: 'Balanceo sensual del cuerpo con rebote natural del pecho.',
@@ -638,25 +648,15 @@
             tips: 'Cualquier ropa; cuerpo completo da el mejor efecto.',
             inputType: 'undress', previewLink: 'https://drive.google.com/file/d/1r7370D894Xxaeziv2C9-BCf72aEZBiKx/preview'
         },
-        'vid-rip': {
-            desc: 'Se rasga la ropa de forma agresiva exponiendo su cuerpo.',
-            tips: 'Top, bodysuit o leggings; ropa ajustada funciona mejor.',
-            inputType: 'undress', previewLink: 'https://drive.google.com/file/d/1_2rXLugbQsLBiFeFqVB_KbSpOF9ixyAd/preview'
-        },
         'vid-pulldown': {
-            desc: 'Baja su top y pantalón lentamente hasta quedar desnuda.',
-            tips: 'Foto con top y pantalón o falda; medio cuerpo o cuerpo completo.',
+            desc: 'Baja su top por debajo del pecho alejando la tela de su rostro.',
+            tips: 'Foto con top o blusa; medio cuerpo, mirando a cámara.',
             inputType: 'undress', previewLink: 'https://drive.google.com/file/d/1dgkCTqQJ9EnnvrlP3jJety6P3nmM9DQ5/preview'
         },
         'vid-before-after': {
             desc: 'Transición directa de vestida a desnuda en la misma pose.',
             tips: 'Pose clara de cuerpo completo con fondo simple.',
             inputType: 'undress', previewLink: 'https://drive.google.com/file/d/1HSBRGtqyTQEOfRHgtPipH48Qsn-Xw2w2/preview'
-        },
-        'vid-undress': {
-            desc: 'Se desviste pieza por pieza hasta quedar completamente nude.',
-            tips: 'Mejor con varias prendas puestas; distancia media.',
-            inputType: 'undress', previewLink: 'https://drive.google.com/file/d/1WEdKobbjFJie7GLeZmBcRLcdtCXEWtQp/preview'
         },
         'vid-tittydrop-t2v': {
             desc: 'Variante alternativa de levantar la blusa y soltar el pecho.',
