@@ -10,11 +10,15 @@ completar y guarda el PNG en pruebas/.
 """
 import base64
 import json
+import os
 import sys
 import time
 import urllib.request
 
-API = "https://leoonardo170--estudio-ia-serverless-api.us-east.modal.run"
+API = os.environ.get(
+    "STUDIO_API",
+    "https://leoonardo170--estudio-ia-serverless-api.us-east.modal.run",
+)
 IMG_PATH = "/Users/leonardo/Downloads/studioAI/pruebas/reference.JPG"
 OUT_DIR = "/Users/leonardo/Downloads/studioAI/pruebas"
 
@@ -198,6 +202,123 @@ TESTS = {
         "steps": 30, "cfg_scale": 7.0, "denoising_strength": 1.0,
         "blend_mode": "raw", "preserve_limbs": True, "seed": 7,
     },
+    # Config ganadora actual (img-realism mejorado, seed 37, draft, detail 0.45)
+    "v2": {
+        "prompt": (
+            "photorealistic fully nude woman, exact same skin tone as the "
+            "original photo, same seated pose, same body position and camera "
+            "framing, empty hands resting naturally, completely naked, "
+            "full natural breasts, areolae and nipples matching her natural "
+            "lip color, bare abdomen and navel, exposed vulva and subtle "
+            "natural pubic hair only where the photo framing allows, "
+            "keeping her necklace and tattoos intact, detailed natural skin "
+            "texture with visible pores, same lighting as the original "
+            "photo, uncensored"
+        ),
+        "negative_prompt": NUDE_NEG,
+        "mask_target": "all_clothes",
+        "steps": 30, "cfg_scale": 5.0, "denoising_strength": 1.0,
+        "blend_mode": "raw", "preserve_limbs": True, "seed": 37,
+        "draft": True, "lora_scale": 0.45,
+    },
+    # Mismo payload que v2 pero con motor APEX (A/B directo)
+    "apex": {
+        "prompt": (
+            "photorealistic fully nude woman, exact same skin tone as the "
+            "original photo, same seated pose, same body position and camera "
+            "framing, empty hands resting naturally, completely naked, "
+            "full natural breasts, areolae and nipples matching her natural "
+            "lip color, bare abdomen and navel, exposed vulva and subtle "
+            "natural pubic hair only where the photo framing allows, "
+            "keeping her necklace and tattoos intact, detailed natural skin "
+            "texture with visible pores, same lighting as the original "
+            "photo, uncensored"
+        ),
+        "negative_prompt": NUDE_NEG,
+        "mask_target": "all_clothes",
+        "steps": 30, "cfg_scale": 5.0, "denoising_strength": 1.0,
+        "blend_mode": "raw", "preserve_limbs": True, "seed": 37,
+        "draft": True, "lora_scale": 0.45, "model": "apex",
+    },
+    # APEX calidad completa con refine (draft off, refine 0.3)
+    "apex_full": {
+        "prompt": (
+            "photorealistic fully nude woman, exact same skin tone as the "
+            "original photo, same seated pose, same body position and camera "
+            "framing, empty hands resting naturally, completely naked, "
+            "full natural breasts, areolae and nipples matching her natural "
+            "lip color, bare abdomen and navel, exposed vulva and subtle "
+            "natural pubic hair only where the photo framing allows, "
+            "keeping her necklace and tattoos intact, detailed natural skin "
+            "texture with visible pores, same lighting as the original "
+            "photo, uncensored"
+        ),
+        "negative_prompt": NUDE_NEG,
+        "mask_target": "all_clothes",
+        "steps": 30, "cfg_scale": 5.0, "denoising_strength": 1.0,
+        "blend_mode": "raw", "preserve_limbs": True, "seed": 37,
+        "lora_scale": 0.45, "model": "apex", "refine_strength": 0.3,
+    },
+    # v2 rumbo Wan: calido pero natural, collar fino real, senos llenos naturales
+    "v2target": {
+        "prompt": (
+            "photorealistic fully nude woman, same seated pose, same body "
+            "position and camera framing, empty hands resting naturally, "
+            "completely naked, full natural breasts with natural sag, "
+            "prominent puffy areolae and nipples matching her natural lip "
+            "color, bare abdomen and navel, exposed vulva and subtle natural "
+            "pubic hair only where the photo framing allows, wearing her "
+            "thin silver necklace with small pendant, keeping her script "
+            "tattoo on the chest, natural skin tone matching her face, "
+            "soft warm rosy undertone, detailed natural skin texture, "
+            "soft natural lighting, uncensored"
+        ),
+        "negative_prompt": NUDE_NEG,
+        "mask_target": "all_clothes",
+        "steps": 30, "cfg_scale": 5.0, "denoising_strength": 1.0,
+        "blend_mode": "raw", "preserve_limbs": True, "seed": 37,
+        "draft": True, "model": "v2",
+    },
+    # v2target sin tatuaje: solo collar fino + tono rosado
+    "v2neck": {
+        "prompt": (
+            "photorealistic fully nude woman, same seated pose, same body "
+            "position and camera framing, empty hands resting naturally, "
+            "completely naked, full natural breasts with natural sag, "
+            "prominent puffy areolae and nipples matching her natural lip "
+            "color, bare abdomen and navel, exposed vulva and subtle natural "
+            "pubic hair only where the photo framing allows, wearing a thin "
+            "silver necklace with a small pendant, natural skin tone "
+            "matching her face, soft warm rosy undertone, detailed natural "
+            "skin texture, soft natural lighting, uncensored"
+        ),
+        "negative_prompt": (
+            NUDE_NEG + ", camera, phone, object in hands, objects on skin"
+        ),
+        "mask_target": "all_clothes",
+        "steps": 30, "cfg_scale": 5.0, "denoising_strength": 1.0,
+        "blend_mode": "raw", "preserve_limbs": True, "seed": 37,
+        "draft": True, "model": "v2",
+    },
+    # draft_v2 exacto + debug para inspeccionar la mascara
+    "v2fix": {
+        "prompt": (
+            "photorealistic fully nude woman, exact same skin tone as the "
+            "original photo, same seated pose, same body position and camera "
+            "framing, empty hands resting naturally, completely naked, "
+            "full natural breasts, areolae and nipples matching her natural "
+            "lip color, bare abdomen and navel, exposed vulva and subtle "
+            "natural pubic hair only where the photo framing allows, "
+            "detailed natural skin texture with visible pores, "
+            "same lighting as the original photo, uncensored"
+        ),
+        "negative_prompt": NUDE_NEG,
+        "mask_target": "all_clothes",
+        "steps": 30, "cfg_scale": 5.0, "denoising_strength": 1.0,
+        "blend_mode": "raw", "preserve_limbs": True, "seed": 37,
+        "draft": True, "lora_scale": 0.45, "model": "v2",
+        "debug": True,
+    },
     # Solo topless (mask_target upper_clothes si existe; si no, all_clothes)
     "topless": {
         "prompt": (
@@ -302,6 +423,8 @@ def main():
         print("Tests:", ", ".join(TESTS))
         sys.exit(1)
     out_name = f"{name}_{sys.argv[2]}" if len(sys.argv) > 2 else name
+    run_dir = os.path.join(OUT_DIR, out_name)
+    os.makedirs(run_dir, exist_ok=True)
 
     b = billing()
     print(f"[billing] remaining=${b.get('remaining_usd')}")
@@ -315,7 +438,7 @@ def main():
         "negative_prompt": cfg["negative_prompt"],
         "steps": cfg["steps"],
         "cfg_scale": cfg["cfg_scale"],
-        "lora_scale": 0.0,
+        "lora_scale": cfg.get("lora_scale", 0.0),
         "mask_target": cfg["mask_target"],
         "skin_pre_adapt": cfg.get("skin_pre_adapt", False),
         "width": 832,
@@ -325,7 +448,8 @@ def main():
     for k in ("denoising_strength", "blend_mode", "preserve_limbs", "seed",
               "expand_body", "full_body", "frame_scale", "control_scale",
               "outpaint_steps", "outpaint_control_scale",
-              "refine_strength", "extend_ratio", "frame_align_x", "debug"):
+              "refine_strength", "extend_ratio", "frame_align_x", "debug",
+              "draft", "model"):
         if k in cfg:
             payload[k] = cfg[k]
     if len(sys.argv) > 3:
@@ -352,20 +476,20 @@ def main():
         if status == "completed":
             imgs = st.get("images") or []
             img_b64 = imgs[0] if imgs else ""
-            if "," in img_b64:
-                img_b64 = img_b64.split(",", 1)[1]
-            out = f"{OUT_DIR}/test_{out_name}.png"
+            out = f"{run_dir}/test_{out_name}.png"
             try:
                 dbg = json.loads(img_b64)
             except (ValueError, TypeError):
                 dbg = None
+            if "," in img_b64:
+                img_b64 = img_b64.split(",", 1)[1]
             if isinstance(dbg, dict) and "image" in dbg:
                 for key, val in dbg.items():
-                    if not val:
+                    if not isinstance(val, str) or not val:
                         continue
                     if "," in val:
                         val = val.split(",", 1)[1]
-                    p = f"{OUT_DIR}/test_{out_name}_{key}.png"
+                    p = f"{run_dir}/test_{out_name}_{key}.png"
                     with open(p, "wb") as f:
                         f.write(base64.b64decode(val))
                     print(f"[saved] {p}")

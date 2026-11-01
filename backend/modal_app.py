@@ -31,6 +31,11 @@ SDXL_BASE_DIR = "/root/models/lustify_sdxl"
 SDXL_INPAINT_REPO = "andro-flock/LUSTIFY-SDXL-NSFW-checkpoint-v2-0-INPAINTING"
 SDXL_INPAINT_DIR = "/root/models/lustify_inpaint_full"
 
+# Lustify APEX v8 inpainting (single-file checkpoint, converted at build)
+SDXL_APEX_REPO = "timothy692/Lustify_APEX_Inpainting_v8"
+SDXL_APEX_FILE = "lustifySDXLNSFW_apexINPAINTING.safetensors"
+SDXL_APEX_DIR = "/root/models/lustify_apex_inpaint"
+
 SDXL_OPENPOSE_CONTROLNET_REPO = "xinsir/controlnet-openpose-sdxl-1.0"
 SDXL_OPENPOSE_CONTROLNET_DIR = "/root/models/openpose_sdxl_controlnet"
 
@@ -370,6 +375,34 @@ def download_inpaint_and_segmenter():
     YOLO("/root/models/yolov8n-pose.pt")
 
 
+def download_apex_and_convert():
+    """Descarga el checkpoint APEX v8 inpainting y lo convierte a diffusers."""
+    if os.path.exists(os.path.join(SDXL_APEX_DIR, "model_index.json")):
+        print("APEX ya convertido, skip")
+        return
+
+    import torch
+    from diffusers import StableDiffusionXLInpaintPipeline
+    from huggingface_hub import hf_hub_download
+
+    ckpt = hf_hub_download(
+        repo_id=SDXL_APEX_REPO,
+        filename=SDXL_APEX_FILE,
+    )
+    print(f"APEX checkpoint: {ckpt}")
+    pipe = StableDiffusionXLInpaintPipeline.from_single_file(
+        ckpt, torch_dtype=torch.float16
+    )
+    in_ch = int(pipe.unet.config.in_channels)
+    if in_ch != 9:
+        raise RuntimeError(
+            f"APEX conversion produced in_channels={in_ch}, expected 9"
+        )
+    os.makedirs(SDXL_APEX_DIR, exist_ok=True)
+    pipe.save_pretrained(SDXL_APEX_DIR, safe_serialization=True)
+    print("APEX convertido y guardado en", SDXL_APEX_DIR)
+
+
 engine_image = (
     modal.Image.debian_slim(python_version="3.11")
     .apt_install("wget", "ffmpeg", "libgl1", "libglib2.0-0")
@@ -394,9 +427,13 @@ engine_image = (
     .env({"HF_XET_HIGH_PERFORMANCE": "1"})
     .run_function(download_base_sdxl)
     .run_function(download_inpaint_and_segmenter)
+    .run_function(download_apex_and_convert)
 )
 
-app = modal.App("estudio-ia-serverless", image=engine_image)
+app = modal.App(
+    os.environ.get("STUDIO_APP_NAME") or "estudio-ia-serverless",
+    image=engine_image,
+)
 
 
 def get_sdxl_native_dimensions(w: int, h: int) -> tuple[int, int]:
@@ -495,6 +532,34 @@ class ImageEngine:
                 self.detail_adapter_loaded = True
             except Exception as e:
                 print(f"LoRA warn: {e}")
+
+        self.inpaint_apex = None
+        self.detail_adapter_loaded_apex = False
+        if os.path.exists(os.path.join(SDXL_APEX_DIR, "model_index.json")):
+            try:
+                apex_pipe = StableDiffusionXLControlNetInpaintPipeline.from_pretrained(
+                    SDXL_APEX_DIR,
+                    controlnet=controlnet,
+                    scheduler=DPMSolverMultistepScheduler.from_config(
+                        self.inpaint_scheduler.config
+                    ),
+                    torch_dtype=torch.float16,
+                    use_safetensors=True,
+                    local_files_only=True,
+                ).to("cuda")
+                apex_pipe.watermark = None
+                apex_pipe.safety_checker = None
+                if os.path.exists(SDXL_LORA_PATH):
+                    apex_pipe.load_lora_weights(
+                        SDXL_LORA_PATH, adapter_name="detail_xl"
+                    )
+                    apex_pipe.set_adapters(
+                        ["detail_xl"], adapter_weights=[0.65]
+                    )
+                    self.detail_adapter_loaded_apex = True
+                self.inpaint_apex = apex_pipe
+            except Exception as e:
+                print(f"APEX load warn: {e}")
 
         print(
             "ImageEngine ready:",
@@ -1189,6 +1254,43 @@ class ImageEngine:
             )
             lower_cloth_protect = np.zeros_like(cloth_raw)
 
+        skin_ref_np = np.isin(seg_map, [11, 14, 15])
+        skin_ref_rgb = None
+        rgb_dist = None
+        if np.count_nonzero(skin_ref_np) >= 200:
+            skin_ref_rgb = np.median(
+                img_np[skin_ref_np].astype(np.float32), axis=0
+            )
+            rgb_dist = np.sqrt(
+                np.sum(
+                    np.square(
+                        img_np.astype(np.float32) - skin_ref_rgb
+                    ),
+                    axis=2,
+                )
+            )
+            # Garment fragments the segmenter missed (thin straps, ties,
+            # lace edges): grow the cloth mask across non-skin pixels
+            # only, so expansion stops at bare skin and accessories.
+            import cv2
+
+            ext_np = cloth_raw.astype(np.uint8)
+            grow_k = np.ones((7, 7), np.uint8)
+            for _grow_i in range(10):
+                grown_np = (
+                    cv2.dilate(ext_np, grow_k, iterations=1) > 0
+                )
+                new_np = (
+                    grown_np
+                    & (ext_np == 0)
+                    & (rgb_dist > 55.0)
+                    & (seg_map != 0)
+                )
+                if not np.count_nonzero(new_np):
+                    break
+                ext_np[new_np] = 1
+            cloth_raw = ext_np.astype(bool)
+
         clothes_np = np.array(
             Image.fromarray(cloth_raw.astype(np.uint8) * 255, mode="L").filter(
                 ImageFilter.MaxFilter(15)
@@ -1331,20 +1433,8 @@ class ImageEngine:
             ),
             dtype=np.uint8,
         )
-        skin_ref_np = np.isin(seg_map, [11, 14, 15])
-        skin_ref_rgb = None
-        rgb_dist = None
         limbs_skin_np = limbs_np
-        if np.count_nonzero(skin_ref_np) >= 200:
-            skin_ref_rgb = np.median(
-                img_np[skin_ref_np].astype(np.float32), axis=0
-            )
-            rgb_dist = np.sqrt(
-                np.sum(
-                    np.square(img_np.astype(np.float32) - skin_ref_rgb),
-                    axis=2,
-                )
-            )
+        if rgb_dist is not None:
             limbs_skin_np = np.where(
                 limb_raw_np & (rgb_dist < 75.0), 255, 0
             ).astype(np.uint8)
@@ -1399,6 +1489,74 @@ class ImageEngine:
         )
 
         active_np[protect_np > 128] = 0
+
+        # Accessories visible on skin above each garment's top edge stay
+        # original (necklaces, tattoos...). Computed per column so
+        # V-necks/straps are respected. Only elongated or decent-size
+        # components are kept — round dots (moles, print) are dropped,
+        # and anything sitting on cloth is rejected as fabric pattern.
+        if np.count_nonzero(cloth_raw) and mask_target in (
+            "all_clothes",
+            "upper_clothes",
+        ) and rgb_dist is not None:
+            cloth_ys, cloth_xs = np.where(cloth_raw)
+            col_top = np.full(w, h + 1, dtype=np.int64)
+            for x_u in np.unique(cloth_xs):
+                col_top[x_u] = cloth_ys[cloth_xs == x_u].min()
+            yy_idx = np.arange(h, dtype=np.int64)[:, None]
+            above_np = (yy_idx < col_top[None, :]) & (person_area > 128)
+            detail_np = (
+                (active_np > 128)
+                & above_np
+                & np.isin(seg_map, [11, 12, 13, 14, 15])
+                & ~cloth_raw
+                & (rgb_dist > 45.0)
+            ).astype(np.uint8) * 255
+            if np.count_nonzero(detail_np):
+                import cv2
+
+                # Group nearby detail pixels first — a thin chain or
+                # script tattoo fragments into many tiny pieces, so the
+                # filter must see the accessory as one cluster.
+                grp_np = cv2.dilate(
+                    detail_np,
+                    cv2.getStructuringElement(
+                        cv2.MORPH_ELLIPSE, (61, 61)
+                    ),
+                    iterations=1,
+                )
+                num_lbl, lbl_np, st_np, _ct = (
+                    cv2.connectedComponentsWithStats(grp_np, 8)
+                )
+                keep_np = np.zeros_like(detail_np)
+                for comp_i in range(1, num_lbl):
+                    comp_m = lbl_np == comp_i
+                    members = int(
+                        np.count_nonzero(detail_np[comp_m])
+                    )
+                    comp_a = int(st_np[comp_i, cv2.CC_STAT_AREA])
+                    comp_w = max(1, int(st_np[comp_i, cv2.CC_STAT_WIDTH]))
+                    comp_h = max(1, int(st_np[comp_i, cv2.CC_STAT_HEIGHT]))
+                    elong = max(comp_w, comp_h) / min(comp_w, comp_h)
+                    if members < 60 or (elong < 1.8 and comp_a < 400):
+                        continue
+                    near_np = (
+                        cv2.dilate(
+                            comp_m.astype(np.uint8),
+                            np.ones((21, 21), np.uint8),
+                        ) > 0
+                    )
+                    if np.count_nonzero(near_np & cloth_raw) > (
+                        comp_a // 2
+                    ):
+                        continue
+                    keep_np[comp_m] = 255
+                if np.count_nonzero(keep_np):
+                    # keep only the skin area inside each group — never
+                    # let the preserved blob reach into cloth pixels
+                    keep_np[~above_np] = 0
+                    keep_np[cloth_raw] = 0
+                    active_np[keep_np > 128] = 0
         skin_sample_np = np.isin(seg_map, [11, 14, 15])
         skin_sample_np &= active_np <= 128
         skin_rgb = None
@@ -1519,8 +1677,13 @@ class ImageEngine:
             )
         )
         mask_target = payload.get("mask_target", "all_clothes")
-        inpaint_pipe = self.inpaint
-        detail_ready = self.detail_adapter_loaded
+        model_variant = str(payload.get("model") or "v2").lower()
+        if model_variant == "apex" and self.inpaint_apex is not None:
+            inpaint_pipe = self.inpaint_apex
+            detail_ready = self.detail_adapter_loaded_apex
+        else:
+            inpaint_pipe = self.inpaint
+            detail_ready = self.detail_adapter_loaded
 
         init_images = payload.get("init_images") or []
 
